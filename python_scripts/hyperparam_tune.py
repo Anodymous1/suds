@@ -19,8 +19,8 @@ import gc
 
 torch.set_num_threads(4)
 
-theta_train = torch.from_numpy(np.array(pd.read_csv("./data/training_theta(100).csv", header=None))).float()
-x_train = torch.from_numpy(np.array(pd.read_csv("./data/training_x(100).csv", header=None))).float() 
+theta_train = torch.from_numpy(np.array(pd.read_csv("./data/training_theta(poisson).csv", header=None))).float()
+x_train = torch.from_numpy(np.array(pd.read_csv("./data/training_x(poisson).csv", header=None))).float() 
 
 def objective(trial):
         
@@ -38,7 +38,7 @@ def objective(trial):
     likelihood_estimator = inference.train(learning_rate = learning_rate,
                                            training_batch_size = training_batch_size,
                                            stop_after_epochs = 10,
-                                           dataloader_kwargs= {"num_workers": 4, 
+                                           dataloader_kwargs= {"num_workers": 2, 
                                                                 "persistent_workers": True}
     )
     
@@ -61,7 +61,7 @@ study = optuna.create_study(direction="maximize")
 study.optimize(objective, n_trials=30)
 
 import pickle
-with open("./model/tune.pkl", "wb") as handle:
+with open("./model/tune(poisson).pkl", "wb") as handle:
     pickle.dump(study, handle)
     
 print(study.best_params)

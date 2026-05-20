@@ -46,9 +46,10 @@ posterior = inference.build_posterior(likelihood_estimator,
                                                         "num_workers": 4,
                                                         "init_strategy": "sir"})
 
-test_x = test_x[:2]
-rows = np.random.choice(test_x[0].shape[0], size=10, replace=False)
-samples = [posterior.sample((100,), x=x_o[rows]) for x_o in test_x]
+# Test first 100 galaxies
+test_x = test_x[:100]
+
+samples = [posterior.sample((100,), x=x_o) for x_o in test_x]
 
 with open("./mcmc/samples(100).pkl", "wb") as handle:
     pickle.dump(samples, handle)
