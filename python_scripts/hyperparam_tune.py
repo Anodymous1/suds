@@ -61,7 +61,7 @@ study = optuna.create_study(direction="maximize")
 study.optimize(objective, n_trials=30)
 
 import pickle
-with open("./model/tune(poisson).pkl", "wb") as handle:
+with open("./model/tune.pkl", "wb") as handle:
     pickle.dump(study, handle)
     
 print(study.best_params)
