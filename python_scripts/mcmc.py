@@ -29,12 +29,12 @@ index = np.sort(index)
 test_x = np.split(test_x_raw, index, axis=0)[1:]
 
 
-with open('./model/likelihood_estimator.pkl', 'rb') as file:
+with open('./model/likelihood_estimator(poisson).pkl', 'rb') as file:
     # Load the object from the file
     likelihood_estimator = pickle.load(file)
     
 
-with open('./model/inference.pkl', 'rb') as file:
+with open('./model/inference(poisson).pkl', 'rb') as file:
     # Load the object from the file
     inference = pickle.load(file)
     
@@ -51,5 +51,5 @@ test_x = test_x[:100]
 
 samples = [posterior.sample((100,), x=x_o) for x_o in test_x]
 
-with open("./mcmc/samples(100).pkl", "wb") as handle:
+with open("./mcmc/samples(poisson).pkl", "wb") as handle:
     pickle.dump(samples, handle)

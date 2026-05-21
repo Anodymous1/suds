@@ -1,0 +1,22 @@
+model
+    - inference/likelihood.pkl: trained on 10k galaxies, 1 star per - base model
+        - model_eval.png: model evaluation for this base model_eval
+    - inference/likelihood(poisson).pkl: trained on 10k galaxies, poisson distribution of mu = 100 stars
+    - optuna_tune(100).png: optuna tuning progress using 100 star per galaxy, 10k galaxy model
+    - tune(100).pkl: optuna tuning results using 100 star per galaxy, 10k galaxy model
+    - optuna_tune(poisson_d_20k).png: optuna tuning progress using ~20k entries of the train_x/theta(poisson) data set, with density estimator "nsf"
+    - tune(poisson_d_20k).pkl: optuna tuning result using ~20k entries of the train_x/theta(poisson) data set, with density estimator "nsf"
+
+mcmc
+    - samples.pkl: 100 mcmc samples of 100 galaxies(of poisson data set) of model trained on 10k galaxies, 1 star per - base model
+
+python_scripts
+    - galaxy_generation: function for generating galaxies (to import)
+    - prior_generation: function for generating prior (to import)
+    - mcmc: generating mcmc samples
+    - model: train model
+    - hyperparam_tune: using optuna to tune hyper parameters
+
+suds
+    - formula_visualization: formula visualization
+    - model_training: where all the scratch work goes
