@@ -1,0 +1,104 @@
+import os
+os.environ["OMP_NUM_THREADS"] = "1"     # agama
+os.environ["MKL_NUM_THREADS"] = "1"     # numpy, scipy
+os.environ["OPENBLAS_NUM_THREADS"] = "1"    # numpy
+os.environ["NUMEXPR_NUM_THREADS"] = "1"     # pandas
+import random
+import agama
+import torch 
+import numpy as np
+
+import pandas as pd
+import pickle
+from galaxy_generation import generate_galaxy_multiple
+import time
+# from sbi.inference.posteriors.mcmc_posterior import MCMCPosterior
+
+import sbi
+print(sbi.__version__)
+
+agama.setRandomSeed(13)
+torch.manual_seed(13)
+np.random.seed(13)
+random.seed(13)
+
+import corner
+
+torch.set_num_threads(4)
+
+# Galaxy
+log_p_0 = 7
+log_r_s = 0
+gamma = 1
+r_star_div_r_s = 0.2
+r_star = r_star_div_r_s * 10 ** log_r_s
+
+galaxy = np.expand_dims(np.array([log_p_0, log_r_s, gamma, r_star_div_r_s]), axis=0).astype(np.float32)
+
+# Train settings
+arg = {
+        "training_batch_size": 512,
+        "learning_rate": 0.001347,
+        "validation_fraction": 0.1,
+        "stop_after_epochs": 10,
+        "max_num_epochs": 2**31 - 1,
+        "clip_max_norm": 5.0,
+        "resume_training": False,
+        "discard_prior_samples": False,
+        "retrain_from_scratch": False,
+        "show_train_summary": True,
+        # "dataloader_kwargs": {"num_workers": 2, 
+        #                         "persistent_workers": True}
+}
+
+# MCMC settings
+mcmc_method="slice_np_vectorized" 
+mcmc_parameters={"warmup_steps":500,
+                    "num_chains":32,
+                    "num_workers": 1,
+                    "init_strategy": "sir",
+                    "thin": 4}
+
+# x_o
+x_o = torch.tensor(np.array(pd.read_csv("./model 9/x_o_cusp.csv", header=None))).float()
+
+# Training
+with open("./model 3/inference(poisson).pkl", "rb") as file:
+    inference = pickle.load(file)
+
+
+# Sequential training settings
+num_samples = 1000
+num_rounds = 5
+
+# Initialize loop
+posterior = inference.build_posterior(mcmc_method=mcmc_method, mcmc_parameters=mcmc_parameters)
+proposal = posterior.set_default_x(x_o)
+
+# Begin training
+start_time_whole = time.perf_counter()
+
+for i in range(num_rounds):
+    print(f"Beginning round {i}")
+    start_time = time.perf_counter()
+    
+    theta = proposal.sample((num_samples,))
+    
+    n_stars = torch.tensor(np.random.poisson(100, size=num_samples))
+    new_x = generate_galaxy_multiple(theta, n_stars, 4)
+    new_theta = torch.repeat_interleave(theta, n_stars, dim=0)
+    
+    inference.append_simulations(new_theta, new_x).train(**arg)
+    
+    posterior = inference.build_posterior(mcmc_method=mcmc_method, mcmc_parameters=mcmc_parameters)
+    proposal = posterior.set_default_x(x_o)
+    
+    end_time = time.perf_counter()
+    print(f"Round {i} took {end_time - start_time:.4f} seconds")
+
+end_time_whole = time.perf_counter()
+print(f"Entire training took {end_time_whole - start_time_whole:.4f} seconds")
+
+# save model
+with open("./model 9/inference_model_9_cusp.pkl", "wb") as handle:
+    pickle.dump(inference, handle)

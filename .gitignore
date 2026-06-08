@@ -1,0 +1,4 @@
+sbi-logs
+model 8/training_theta_g100k_s100p.csv
+model 8/training_x_g100k_s100p.csv
+model 8/inference_model_8.pkl
