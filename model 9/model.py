@@ -69,7 +69,7 @@ mcmc_parameters={"warmup_steps":500,
                     "thin": 4}
 
 # x_o
-x_o = torch.tensor(np.array(pd.read_csv(f"./model 9/x_o_{prof}.csv", header=None))).float()
+x_o = torch.tensor(np.array(pd.read_csv(f"./model 9/x_o_{prof}_v2.csv", header=None))).float()
 
 
 # Training
@@ -116,5 +116,5 @@ end_time_whole = time.perf_counter()
 print(f"Entire training took {end_time_whole - start_time_whole:.4f} seconds")
 
 # save model
-with open(f"./model 9/inference_model_9_{prof}.pkl", "wb") as handle:
+with open(f"./model 9/inference_model_9_{prof}_v2.pkl", "wb") as handle:
     pickle.dump(inference, handle)
