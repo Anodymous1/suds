@@ -12,6 +12,9 @@ import pandas as pd
 import pickle
 from galaxy_generation import generate_galaxy_multiple
 import time
+from sbi.inference import SNLE
+from prior_generation import generate_prior
+
 # from sbi.inference.posteriors.mcmc_posterior import MCMCPosterior
 
 import sbi
@@ -33,6 +36,12 @@ gamma = 1
 r_star_div_r_s = 0.2
 r_star = r_star_div_r_s * 10 ** log_r_s
 
+if gamma == 0:
+    prof = "core"
+else:
+    prof = "cusp"
+
+
 galaxy = np.expand_dims(np.array([log_p_0, log_r_s, gamma, r_star_div_r_s]), axis=0).astype(np.float32)
 
 # Train settings
@@ -45,7 +54,7 @@ arg = {
         "clip_max_norm": 5.0,
         "resume_training": False,
         "discard_prior_samples": False,
-        "retrain_from_scratch": False,
+        "retrain_from_scratch": True,
         "show_train_summary": True,
         # "dataloader_kwargs": {"num_workers": 2, 
         #                         "persistent_workers": True}
@@ -60,11 +69,18 @@ mcmc_parameters={"warmup_steps":500,
                     "thin": 4}
 
 # x_o
-x_o = torch.tensor(np.array(pd.read_csv("./model 9/x_o_cusp.csv", header=None))).float()
+x_o = torch.tensor(np.array(pd.read_csv(f"./model 9/x_o_{prof}.csv", header=None))).float()
+
 
 # Training
-with open("./model 3/inference(poisson).pkl", "rb") as file:
-    inference = pickle.load(file)
+
+
+# Train model 3
+theta_train = torch.from_numpy(np.array(pd.read_csv("./model 3/training_theta(poisson).csv", header=None))).float()
+x_train = torch.from_numpy(np.array(pd.read_csv("./model 3/training_x(poisson).csv", header=None))).float()
+
+inference = SNLE(prior=generate_prior())
+inference.append_simulations(theta_train, x_train).train(**arg)
 
 
 # Sequential training settings
@@ -100,5 +116,5 @@ end_time_whole = time.perf_counter()
 print(f"Entire training took {end_time_whole - start_time_whole:.4f} seconds")
 
 # save model
-with open("./model 9/inference_model_9_cusp.pkl", "wb") as handle:
+with open(f"./model 9/inference_model_9_{prof}.pkl", "wb") as handle:
     pickle.dump(inference, handle)

@@ -38,7 +38,7 @@ def sample_single_galaxy(i, x_o, posterior):
     x_o = torch.from_numpy(x_o).float()
     
     with torch.no_grad():
-        samples = posterior.sample((2000,), x=x_o, show_progress_bars=False).numpy()
+        samples = posterior.sample((2000,), x=x_o, show_progress_bars=True).numpy()
     
     end_time = time.perf_counter()
     print(f"Galaxy {i} took {end_time - start_time:.4f} seconds")
@@ -73,10 +73,10 @@ if __name__ == "__main__":
     posterior = inference.build_posterior( 
                                         mcmc_method="slice_np_vectorized", 
                                         mcmc_parameters={"warmup_steps":500,
-                                                            "num_chains":32,
+                                                            "num_chains":16,
                                                             "num_workers": 1,
                                                             "init_strategy": "proposal",
-                                                            "thin": 4})
+                                                            "thin": 1})
 
     # Test first 100 galaxies
 
