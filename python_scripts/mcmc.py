@@ -73,7 +73,7 @@ if __name__ == "__main__":
     posterior = inference.build_posterior( 
                                         mcmc_method="slice_np_vectorized", 
                                         mcmc_parameters={"warmup_steps":500,
-                                                            "num_chains":16,
+                                                            "num_chains":8,
                                                             "num_workers": 1,
                                                             "init_strategy": "proposal",
                                                             "thin": 1})
@@ -82,7 +82,7 @@ if __name__ == "__main__":
 
     test_x = test_x[:100]
 
-    n_galaxies_at_once = 50
+    n_galaxies_at_once = 25
     
     print(f"Starting parallel MCMC for {len(test_x)} galaxies...")
     start_time = time.perf_counter()
