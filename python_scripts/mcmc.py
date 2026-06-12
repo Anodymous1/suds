@@ -73,16 +73,16 @@ if __name__ == "__main__":
     posterior = inference.build_posterior( 
                                         mcmc_method="slice_np_vectorized", 
                                         mcmc_parameters={"warmup_steps":500,
-                                                            "num_chains":8,
+                                                            "num_chains":32,
                                                             "num_workers": 1,
-                                                            "init_strategy": "proposal",
+                                                            "init_strategy": "sir",
                                                             "thin": 1})
 
     # Test first 100 galaxies
 
-    test_x = test_x[:100]
+    test_x = test_x[:1]
 
-    n_galaxies_at_once = 25
+    n_galaxies_at_once = 1
     
     print(f"Starting parallel MCMC for {len(test_x)} galaxies...")
     start_time = time.perf_counter()
@@ -96,7 +96,7 @@ if __name__ == "__main__":
     results.sort(key=lambda x: x[0])
     final_samples = [res[1] for res in results]
 
-    with open("./model 3/samples_g1000_s1000.pkl", "wb") as handle:
+    with open("./model 3/samples_g1000_s1000_test.pkl", "wb") as handle:
         pickle.dump(final_samples, handle)
         
     end_time = time.perf_counter()

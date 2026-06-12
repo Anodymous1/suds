@@ -51,9 +51,9 @@ if __name__ == "__main__":
     # test_theta_raw = np.array(pd.read_csv("./model 3/test_theta_g1000_s1000.csv", header=None))
     prof = "cusp"
     
-    test_x_raw = np.array(pd.read_csv(f"./model 9/x_test_{prof}", header=None))
+    test_x_raw = np.array(pd.read_csv(f"./model 9/x_test_{prof}.csv", header=None))
 
-    indices = np.array(pd.read_csv("theta_test", header=None))
+    indices = np.array(pd.read_csv("./model 9/theta_test.csv", header=None))
     test_x = np.split(test_x_raw, np.cumsum(indices)[:-1], axis=0)
 
 
@@ -67,14 +67,14 @@ if __name__ == "__main__":
                                         mcmc_parameters={"warmup_steps":500,
                                                             "num_chains":32,
                                                             "num_workers": 1,
-                                                            "init_strategy": "proposal",
+                                                            "init_strategy": "sir",
                                                             "thin": 1})
 
     # Test first 100 galaxies
 
-    # test_x = test_x[:100]
+    test_x = test_x
 
-    n_galaxies_at_once = 25
+    n_galaxies_at_once = 20
     
     print(f"Starting parallel MCMC for {len(test_x)} galaxies...")
     start_time = time.perf_counter()

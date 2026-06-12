@@ -31,8 +31,11 @@ def get_standard():
     """
     get the standardized values of the data set
     """
-    theta = np.array(pd.read_csv("./model 3/training_theta(poisson).csv", header = None))
-    x = np.array(pd.read_csv("./model 3/training_x(poisson).csv", header = None))
+    # theta = np.array(pd.read_csv("./model 3/training_theta(poisson).csv", header = None))
+    # x = np.array(pd.read_csv("./model 3/training_x(poisson).csv", header = None))
+    
+    theta = np.array(pd.read_csv("./training_theta(poisson).csv", header = None))
+    x = np.array(pd.read_csv("./training_x(poisson).csv", header = None))
     
     return standardize(theta, x)
     

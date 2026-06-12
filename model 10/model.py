@@ -100,28 +100,42 @@ for i in range(num_rounds):
     print(f"Beginning round {i}")
     
     # Train settings
-    current_lr = base_lr * (0.8 ** i)
+    # current_lr = base_lr * (0.8 ** i)
     
-    current_dataset_size = len(inference.get_simulations()[0])
-    current_batch_size = int(base_batch_size * (current_dataset_size / initial_dataset_size))
+    # current_dataset_size = len(inference.get_simulations()[0])
+    # current_batch_size = int(base_batch_size * (current_dataset_size / initial_dataset_size))
 
-    current_stop_after_epochs = base_stop_after_epochs + i * 2
+    # current_stop_after_epochs = base_stop_after_epochs + i * 2
+    
+    # arg = {
+    #         "training_batch_size": current_batch_size,
+    #         "learning_rate": current_lr,
+    #         "validation_fraction": 0.1,
+    #         "stop_after_epochs": current_stop_after_epochs,
+    #         "max_num_epochs": 2**31 - 1,
+    #         "clip_max_norm": 5.0,
+    #         "resume_training": False,
+    #         "discard_prior_samples": False,
+    #         "retrain_from_scratch": True,
+    #         "show_train_summary": True,
+    #         # "dataloader_kwargs": {"num_workers": 2, 
+    #         #                         "persistent_workers": True}
+    # }
     
     arg = {
-            "training_batch_size": current_batch_size,
-            "learning_rate": current_lr,
-            "validation_fraction": 0.1,
-            "stop_after_epochs": current_stop_after_epochs,
-            "max_num_epochs": 2**31 - 1,
-            "clip_max_norm": 5.0,
-            "resume_training": False,
-            "discard_prior_samples": False,
-            "retrain_from_scratch": True,
-            "show_train_summary": True,
-            # "dataloader_kwargs": {"num_workers": 2, 
-            #                         "persistent_workers": True}
+        "training_batch_size": 512,
+        "learning_rate": 0.0015,
+        "validation_fraction": 0.1,
+        "stop_after_epochs": 10,
+        "max_num_epochs": 2**31 - 1,
+        "clip_max_norm": 5.0,
+        "resume_training": False,
+        "discard_prior_samples": False,
+        "retrain_from_scratch": True,
+        "show_train_summary": True,
+        # "dataloader_kwargs": {"num_workers": 2, 
+        #                         "persistent_workers": True}
     }
-    
     
     start_time = time.perf_counter()
     
@@ -131,6 +145,7 @@ for i in range(num_rounds):
     new_x = generate_galaxy_multiple(theta, n_stars, 4)
     new_theta = torch.repeat_interleave(theta, n_stars, dim=0)
     
+    new_x = ((new_x - x[1]) / x[2]).float()
     inference.append_simulations(new_theta, new_x).train(**arg)
     
     posterior = inference.build_posterior(mcmc_method=mcmc_method, mcmc_parameters=mcmc_parameters)
