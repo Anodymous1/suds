@@ -47,18 +47,20 @@ def sample_single_galaxy(i, x_o, posterior):
 
 if __name__ == "__main__":
     
-    # testing dataset
-    test_theta_raw = np.array(pd.read_csv("./model 3/test_theta_g1000_s1000.csv", header=None))
-    test_x_raw = np.array(pd.read_csv("./model 3/test_x_g1000_s1000.csv", header=None))
+    # # testing dataset
+    # test_theta_raw = np.array(pd.read_csv("./model 3/test_theta_g1000_s1000.csv", header=None))
+    # test_x_raw = np.array(pd.read_csv("./model 3/test_x_g1000_s1000.csv", header=None))
 
-    # reorder
+    # # reorder
 
-    test_theta, index = np.unique(test_theta_raw, axis=0, return_index=True)
+    # test_theta, index = np.unique(test_theta_raw, axis=0, return_index=True)
 
-    index = np.sort(index)
+    # index = np.sort(index)
 
-    test_x = np.split(test_x_raw, index, axis=0)[1:]
-
+    # test_x = np.split(test_x_raw, index, axis=0)[1:]
+    
+    
+    test_x = np.array([pd.read_csv("./model 3/mass_density_x_cusp_model_3_s5000.csv", header=None)])
 
     # with open('./model/likelihood_estimator(poisson).pkl', 'rb') as file:
     #     # Load the object from the file
@@ -96,9 +98,11 @@ if __name__ == "__main__":
     results.sort(key=lambda x: x[0])
     final_samples = [res[1] for res in results]
 
-    with open("./model 3/samples_g1000_s1000_test.pkl", "wb") as handle:
-        pickle.dump(final_samples, handle)
-        
+    # with open("./model 3/mass_density_samples_cusp_model_3_s5000.pkl", "wb") as handle:
+    #     pickle.dump(final_samples, handle)
+    
+    pd.DataFrame(final_samples[0]).to_csv("./model 3/mass_density_samples_cusp_model_3_s5000.csv", header=None, index=None)
+    
     end_time = time.perf_counter()
     print(f"Total time for {len(test_x)} galaxies: {end_time - start_time:.2f} seconds")
         
