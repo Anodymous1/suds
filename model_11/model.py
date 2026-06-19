@@ -13,7 +13,7 @@ from sbi.inference import SNLE
 from sbi.utils import likelihood_nn
 import pandas as pd
 import pickle
-from standardization import standardize
+from standardization import standardize, get_standard
 from prior_generation import generate_prior
 
 
@@ -31,24 +31,25 @@ theta_train = np.array(pd.read_csv(f"./model_11/train_theta.csv", header=None))
 x_train = np.array(pd.read_csv(f"./model_11/train_x.csv", header=None))
 
 t, x = standardize(theta_train, x_train)
-# theta_train, x_train = t[0], x[0]
 x_train = x[0]
+# x_train = torch.tensor((x_train - x[1]) / x[2]).float()
+x_train = torch.tensor(x_train).float()
 
 theta_train = torch.tensor(theta_train).float()
 torch.set_num_threads(4)
 prior_sbi = generate_prior()
 
-# density_estimator =likelihood_nn(model="nsf", 
-#                                  hidden_features = 106,
-#                                  num_transforms = 5,
-#                                  num_bins= 10)
+density_estimator =likelihood_nn(model="nsf", 
+                                 hidden_features = 128,
+                                 num_transforms = 7,
+                                 num_bins= 8)
 
-# inference = SNLE(prior=prior_sbi, density_estimator=density_estimator)
-inference = SNLE(prior=prior_sbi)
+inference = SNLE(prior=prior_sbi, density_estimator=density_estimator)
+# inference = SNLE(prior=prior_sbi)
 inference.append_simulations(theta_train, x_train)
 arg = {
-        "training_batch_size": 256,
-        "learning_rate": 0.00015197901214187632,
+        "training_batch_size": 1024,
+        "learning_rate": 0.001113340140740274,
         "validation_fraction": 0.1,
         "stop_after_epochs": 20,
         "max_num_epochs": 2 ** 31 - 1,

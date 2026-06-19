@@ -113,6 +113,7 @@ def generate_galaxy_multiple(theta: torch.Tensor, n_stars: np.ndarray, n_jobs: i
     """
     transformed_theta = transform_params(theta)
     
+    torch.set_num_threads(1)
     
     
     results = Parallel(n_jobs=n_jobs)(

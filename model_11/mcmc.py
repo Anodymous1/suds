@@ -51,8 +51,8 @@ if __name__ == "__main__":
     test_theta_raw = np.array(pd.read_csv("./model_11/test_theta.csv", header=None))
     test_x_raw = np.array(pd.read_csv("./model_11/test_x.csv", header=None))
 
-    t, x = get_standard()
-    test_x_raw = (test_x_raw - x[1])/ x[2]
+    # t, x = get_standard()
+    # test_x_raw = (test_x_raw - x[1])/ x[2]
 
     # reorder
 
@@ -66,7 +66,7 @@ if __name__ == "__main__":
 
         
 
-    with open('./model_11/inference_model_11.pkl', 'rb') as file:
+    with open('./model_11/inference_model_11_v3.pkl', 'rb') as file:
         # Load the object from the file
         inference = pickle.load(file)
         
@@ -81,9 +81,9 @@ if __name__ == "__main__":
 
     # Test first 100 galaxies
 
-    # test_x = test_x[:1]
+    test_x = test_x[:100]
 
-    n_galaxies_at_once = 1
+    n_galaxies_at_once = 4
     
     print(f"Starting parallel MCMC for {len(test_x)} galaxies...")
     start_time = time.perf_counter()
@@ -97,7 +97,7 @@ if __name__ == "__main__":
     results.sort(key=lambda x: x[0])
     final_samples = [res[1] for res in results]
 
-    with open("./model_11/samples_model_11.pkl", "wb") as handle:
+    with open("./model_11/samples_model_11_v3.pkl", "wb") as handle:
         pickle.dump(final_samples, handle)
     
     # pd.DataFrame(final_samples[0]).to_csv("./model 3/mass_density_samples_cusp_model_3_s5000.csv", header=None, index=None)
