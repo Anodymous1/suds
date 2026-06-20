@@ -27,10 +27,10 @@ import optuna
 import gc
 
 
-theta_train = np.array(pd.read_csv("./model_11/train_theta.csv", header=None))
-x_train = np.array(pd.read_csv("./model_11/train_x.csv", header=None))
+theta_train = np.array(pd.read_csv("./model_11/training_theta_model_14.csv", header=None))
+x_train = np.array(pd.read_csv("./model_11/training_x_model_14.csv", header=None))
 
-# x_train = standardize(theta_train, x_train)[1][0]
+x_train = standardize(theta_train, x_train)[1][0]
 
 theta_train, x_train = torch.tensor(theta_train[:199983]).float(), torch.tensor(x_train[:199983]).float()
 # theta_train, x_train = torch.tensor(theta_train).float(), torch.tensor(x_train).float()
@@ -44,7 +44,8 @@ def objective(trial):
     
     # Learning
     learning_rate = trial.suggest_float("learning_rate", 1e-5, 1e-2, log=True)
-    training_batch_size = trial.suggest_categorical("training_batch_size", [256, 512, 1024, 2048, 4096])
+    # training_batch_size = trial.suggest_categorical("training_batch_size", [256, 512, 1024, 2048, 4096])
+    training_batch_size = 512
     
     
     # Normalizing flow
@@ -96,7 +97,7 @@ study = optuna.create_study(direction="maximize")
 study.optimize(objective, n_trials=50)
 
 import pickle
-with open("./model_11/tune_model_11_v3.pkl", "wb") as handle:
+with open("./model_11/tune_model_14.pkl", "wb") as handle:
     pickle.dump(study, handle)
     
 print(study.best_params)

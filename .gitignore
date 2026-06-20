@@ -4,3 +4,4 @@ model 8/training_x_g100k_s100p.csv
 model 8/inference_model_8.pkl
 model_13/train_theta_g100k.csv
 model_13/train_x_g100k.csv
+model_13/inference_model_13.pkl

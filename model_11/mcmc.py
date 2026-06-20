@@ -25,7 +25,7 @@ torch.manual_seed(13)
 np.random.seed(13)
 torch.set_num_threads(1)
 
-def sample_single_galaxy(i, x_o, posterior):
+def sample_single_galaxy(i, x_o):
     
     import warnings
     warnings.filterwarnings("ignore", message="An x with a batch size of")
@@ -43,6 +43,8 @@ def sample_single_galaxy(i, x_o, posterior):
     end_time = time.perf_counter()
     print(f"Galaxy {i} took {end_time - start_time:.4f} seconds")
     
+    # gc.collect()
+    
     return i, samples
 
 if __name__ == "__main__":
@@ -51,14 +53,16 @@ if __name__ == "__main__":
     test_theta_raw = np.array(pd.read_csv("./model_11/test_theta.csv", header=None))
     test_x_raw = np.array(pd.read_csv("./model_11/test_x.csv", header=None))
 
-    # t, x = get_standard()
-    # test_x_raw = (test_x_raw - x[1])/ x[2]
+    t, x = get_standard()
+    
+    test_x_raw = (test_x_raw - x[1])/ x[2]
 
     # reorder
 
-    test_theta, index = np.unique(test_theta_raw, axis=0, return_index=True)
+    _, index = np.unique(test_theta_raw, axis=0, return_index=True)
     index = np.sort(index)
     test_x = np.split(test_x_raw, index, axis=0)[1:]
+    test_theta = test_theta_raw[index]
     
     
     
@@ -66,7 +70,7 @@ if __name__ == "__main__":
 
         
 
-    with open('./model_11/inference_model_11_v3.pkl', 'rb') as file:
+    with open('./model_13/inference_model_13.pkl', 'rb') as file:
         # Load the object from the file
         inference = pickle.load(file)
         
@@ -74,7 +78,7 @@ if __name__ == "__main__":
     posterior = inference.build_posterior( 
                                         mcmc_method="slice_np_vectorized", 
                                         mcmc_parameters={"warmup_steps":500,
-                                                            "num_chains":32,
+                                                            "num_chains":16,
                                                             "num_workers": 1,
                                                             "init_strategy": "sir",
                                                             "thin": 1})
@@ -89,7 +93,7 @@ if __name__ == "__main__":
     start_time = time.perf_counter()
     
     results = Parallel(n_jobs=n_galaxies_at_once, verbose=10)(
-        delayed(sample_single_galaxy)(i, x_o, posterior) 
+        delayed(sample_single_galaxy)(i, x_o) 
         for i, x_o in enumerate(test_x)
     )
     
@@ -97,7 +101,7 @@ if __name__ == "__main__":
     results.sort(key=lambda x: x[0])
     final_samples = [res[1] for res in results]
 
-    with open("./model_11/samples_model_11_v3.pkl", "wb") as handle:
+    with open("./model_13/samples_model_13.pkl", "wb") as handle:
         pickle.dump(final_samples, handle)
     
     # pd.DataFrame(final_samples[0]).to_csv("./model 3/mass_density_samples_cusp_model_3_s5000.csv", header=None, index=None)
