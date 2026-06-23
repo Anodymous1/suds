@@ -14,13 +14,13 @@ from prior_generation import generate_prior
 
 torch.set_num_threads(1)
 
-num_galaxies = 100_000
+num_galaxies = 10_000
 prior = generate_prior()
 theta = prior.sample((num_galaxies,))
-n_stars = np.random.poisson(100, size=num_galaxies)
+n_stars = np.random.poisson(1000, size=num_galaxies)
 
 theta = torch.repeat_interleave(theta, torch.tensor(n_stars), dim=0)
 x = generate_galaxy_multiple(theta, n_stars, 25)
 
-pd.DataFrame(x).to_csv("train_x_g100k.csv", index=None, header=None)
-pd.DataFrame(theta).to_csv("train_theta_g100k.csv", index=None, header=None)
+pd.DataFrame(x).to_csv("./model_13_1/train_x_model_13_1.csv", index=None, header=None)
+pd.DataFrame(theta).to_csv("./model_13_1/train_theta_model_13_1.csv", index=None, header=None)

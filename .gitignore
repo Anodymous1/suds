@@ -5,3 +5,7 @@ model 8/inference_model_8.pkl
 model_13/train_theta_g100k.csv
 model_13/train_x_g100k.csv
 model_13/inference_model_13.pkl
+model_13/inference_model_13_v2.pkl
+model_13_1/inference_model_13_1.pkl
+model_13_1/train_theta_model_13_1.csv
+model_13_1/train_x_model_13_1.csv

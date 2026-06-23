@@ -50,8 +50,8 @@ def sample_single_galaxy(i, x_o):
 if __name__ == "__main__":
     
     # testing dataset
-    test_theta_raw = np.array(pd.read_csv("./model_11/test_theta.csv", header=None))
-    test_x_raw = np.array(pd.read_csv("./model_11/test_x.csv", header=None))
+    test_theta_raw = np.array(pd.read_csv("./model_14/test_theta_model_14.csv", header=None))
+    test_x_raw = np.array(pd.read_csv("./model_14/test_x_model_14.csv", header=None))
 
     t, x = get_standard()
     
@@ -70,7 +70,7 @@ if __name__ == "__main__":
 
         
 
-    with open('./model_13/inference_model_13.pkl', 'rb') as file:
+    with open('./model_14/inference_model_14.pkl', 'rb') as file:
         # Load the object from the file
         inference = pickle.load(file)
         
@@ -101,7 +101,7 @@ if __name__ == "__main__":
     results.sort(key=lambda x: x[0])
     final_samples = [res[1] for res in results]
 
-    with open("./model_13/samples_model_13.pkl", "wb") as handle:
+    with open("./model_14/samples_model_14.pkl", "wb") as handle:
         pickle.dump(final_samples, handle)
     
     # pd.DataFrame(final_samples[0]).to_csv("./model 3/mass_density_samples_cusp_model_3_s5000.csv", header=None, index=None)

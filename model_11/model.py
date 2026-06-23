@@ -27,8 +27,8 @@ np.random.seed(13)
 
 # dataset = "poisson"
 
-theta_train = np.array(pd.read_csv(f"./model_11/train_theta.csv", header=None))
-x_train = np.array(pd.read_csv(f"./model_11/train_x.csv", header=None))
+theta_train = np.array(pd.read_csv(f"./model_13_1/train_theta_model_13_1.csv", header=None))
+x_train = np.array(pd.read_csv(f"./model_13_1/train_x_model_13_1.csv", header=None))
 
 t, x = standardize(theta_train, x_train)
 x_train = x[0]
@@ -70,5 +70,5 @@ likelihood_estimator = inference.train(**arg)
 # with open(f"./model 6/likelihood_estimator_model_8.pkl", "wb") as handle:
 #     pickle.dump(likelihood_estimator, handle)
     
-with open(f"./model_11/inference_model_11_test.pkl", "wb") as handle:
+with open(f"./model_13_1/inference_model_13_1.pkl", "wb") as handle:
     pickle.dump(inference, handle)
