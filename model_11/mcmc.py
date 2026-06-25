@@ -53,7 +53,7 @@ if __name__ == "__main__":
     test_theta_raw = np.array(pd.read_csv("./model_14/test_theta_model_14.csv", header=None))
     test_x_raw = np.array(pd.read_csv("./model_14/test_x_model_14.csv", header=None))
 
-    t, x = get_standard()
+    t, x = standardize(test_theta_raw, test_x_raw)
     
     test_x_raw = (test_x_raw - x[1])/ x[2]
 
@@ -78,16 +78,16 @@ if __name__ == "__main__":
     posterior = inference.build_posterior( 
                                         mcmc_method="slice_np_vectorized", 
                                         mcmc_parameters={"warmup_steps":500,
-                                                            "num_chains":16,
+                                                            "num_chains":8,
                                                             "num_workers": 1,
                                                             "init_strategy": "sir",
                                                             "thin": 1})
 
     # Test first 100 galaxies
 
-    test_x = test_x[:100]
+    # test_x = test_x[:100]
 
-    n_galaxies_at_once = 4
+    n_galaxies_at_once = 25
     
     print(f"Starting parallel MCMC for {len(test_x)} galaxies...")
     start_time = time.perf_counter()

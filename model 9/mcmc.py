@@ -13,7 +13,7 @@ from astropy import units as u
 import pandas as pd
 import pickle
 import time
-from standardization import standardize
+from suds.python_scripts.standardization import standardize
 
 from joblib import Parallel, delayed
 
