@@ -69,13 +69,13 @@ def _generate_galaxy(alpha:float,
     Generate the galaxy model given theta
 
     - alpha: Transition sharpness
-    beta: outer slope
-    gamma: inner slope 
-    p_0: density normalization
-    r_s: scale radius
-    r_star: stellar density scale radius
-    r_a: Anisotropy scale radius
-    beta_0: Central anisotropy
+    - beta: outer slope
+    - gamma: inner slope 
+    - p_0: density normalization
+    - r_s: scale radius
+    - r_star: stellar density scale radius
+    - r_a: Anisotropy scale radius
+    - beta_0: Central anisotropy
 
     """
 
@@ -91,7 +91,7 @@ def _generate_galaxy(alpha:float,
 
     return agama.GalaxyModel(pot, df)
 
-def _transform_params(theta: torch.Tensor) -> torch.Tensor:
+def transform_params(theta: torch.Tensor) -> torch.Tensor:
     """
     transform parameters into correct for generate_galaxy
 
@@ -113,6 +113,13 @@ def _transform_params(theta: torch.Tensor) -> torch.Tensor:
 def _simulate_one_galaxy(theta: np.ndarray, num_stars: int) -> np.ndarray:
     """
     Simulate one galaxy
+    
+    returns the generated stars
+    
+    params:
+    - theta: theta
+    - num_stars: number of stars in the galaxy
+    
     """
     model = _generate_galaxy(*theta)
     stars, _ = model.sample(int(num_stars))
@@ -127,8 +134,10 @@ def generate_galaxy_multiple(theta: torch.Tensor, n_stars: np.ndarray, n_jobs: i
 
     - theta: tensor of sampled theta with columns \
         alpha, beta, gamma, log(p_0), log(r_s), log(r_star/r_s), log(r_a / r_star), beta_0
+    - n_stars: the number of stars to generate for each corresponding theta
+    - n_jobs: the number of threads to use to use in the generation process
     """
-    transformed_theta = _transform_params(theta)
+    transformed_theta = transform_params(theta)
     
     torch.set_num_threads(1)
     
