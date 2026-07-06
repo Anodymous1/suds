@@ -181,30 +181,30 @@ if __name__ == "__main__":
                                     "thin": 1}}
                                         
                                         
-    # Example code for mass density
-    prof = "core"
+    # # Example code for mass density
+    # prof = "core"
     
-    test_x = prep_data(f"./8d_theta/model_1/mass_density_{prof}.csv",
-                       train_x= "./8d_theta/model_1/train_x.csv")
-    
-    posterior = prep_posterior(f"./8d_theta/model_1/inference.pkl",
-                               mcmc_settings)
-        
-    final_samples = run_mcmc(test_x, posterior, 1)
-    
-    save_samples(final_samples,
-                 f"8d_theta/model_1/mass_density_samples_{prof}.csv")
-
-
-
-    # # Example code for normal evaluation
-    # test_x = prep_data("./8d_theta/model_1/test_x.csv",
-    #                    test_theta="./8d_theta/model_1/test_theta.csv",
+    # test_x = prep_data(f"./8d_theta/model_1/mass_density_{prof}.csv",
     #                    train_x= "./8d_theta/model_1/train_x.csv")
-
-    # posterior = prep_posterior("./8d_theta/model_1/inference.pkl",
+    
+    # posterior = prep_posterior(f"./8d_theta/model_1/inference.pkl",
     #                            mcmc_settings)
-    # final_samples = run_mcmc(posterior, 5)
+        
+    # final_samples = run_mcmc(test_x, posterior, 1)
     
     # save_samples(final_samples,
-    #              "8d_theta/model_1/samples.pkl")
+    #              f"8d_theta/model_1/mass_density_samples_{prof}.csv")
+
+
+
+    # Example code for normal evaluation
+    test_x = prep_data("./8d_theta/model_1/test_x.csv",
+                       test_theta="./8d_theta/model_1/test_theta.csv",
+                       train_x= "./8d_theta/model_1/train_x.csv")
+
+    posterior = prep_posterior("./8d_theta/model_1/inference.pkl",
+                               mcmc_settings)
+    final_samples = run_mcmc(test_x, posterior, 3)
+    
+    save_samples(final_samples,
+                 "8d_theta/model_1/samples.pkl")

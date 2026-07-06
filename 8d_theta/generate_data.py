@@ -62,11 +62,11 @@ def generate_single(theta:list[float],
     return x
 
 if __name__ == "__main__":
-    # theta, x = generate_data(1_000,
-    #                          100,
-    #                          n_jobs=4)
-    # save_csv(theta, "./8d_theta/model_1/test_theta.csv")
-    # save_csv(x, "./8d_theta/model_1/test_x.csv")
+    theta, x = generate_data(100_000,
+                             100,
+                             n_jobs=4)
+    save_csv(theta, "./8d_theta/model_2/train_theta.csv")
+    save_csv(x, "./8d_theta/model_2/train_x.csv")
     
     # x = generate_single([1, 3, 1, 0, 8.0755, 0, -0.6402, 0, 0], 100)
     # save_csv(x, "./8d_theta/model_1/mass_density_cusp.csv")

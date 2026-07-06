@@ -9,14 +9,9 @@ import agama
 import torch 
 import numpy as np
 from astropy import units as u
-from sbi.utils import likelihood_nn
-import pandas as pd
-import pickle
-from prior_generation import generate_prior
-from standardization import standardize
 import optuna
 import gc
-from object_handler import save_pickle
+from object_handler import save_pickle, load_pickle
 from model import prep_data, prep_inference, train_model
 
 
@@ -78,10 +73,11 @@ if __name__ == "__main__":
                                      standardization=True)
     train_theta, train_x = train_theta[:199983], train_x[:199983]
 
-
-    study = optuna.create_study(direction="maximize")
+    study = load_pickle("./8d_theta/model_1/tune.pkl")
+    
+    # study = optuna.create_study(direction="maximize")
     study.optimize(objective, n_trials=50)
 
-    save_pickle(study, "./8d_theta/model_1/tune.pkl")
+    save_pickle(study, "./8d_theta/model_1/tune_r2.pkl")
 
 
