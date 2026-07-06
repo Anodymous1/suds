@@ -24,13 +24,12 @@ agama.setUnits(mass=1 * u.Msun, length=1*u.kpc, velocity=1 * u.km /u.s)
 agama.setRandomSeed(13)
 torch.manual_seed(13)
 np.random.seed(13)
-torch.set_num_threads(1)
 
 
 def prep_data(test_x: str,
               test_theta: str|None = None,
               train_x: str|None = None,
-              num_entries:int = 100) -> torch.Tensor:
+              num_entries:int = 100) -> list[torch.Tensor]:
     """
     Prepare the data for MCMC
     
@@ -83,14 +82,16 @@ def prep_posterior(model:str,
     with open(model, 'rb') as file:
         # Load the object from the file
         inference = pickle.load(file)
-        
+    
+    inference._neural_net.to("cpu")
+    
     posterior = inference.build_posterior(**mcmc_settings)
     
     return posterior
 
 def sample_single_galaxy(i, 
                          posterior, 
-                         x_o: np.ndarray) -> np.ndarray:
+                         x_o: torch.Tensor) -> torch.Tensor:
     """
     sample a single galaxy using MCMC
     
@@ -108,11 +109,9 @@ def sample_single_galaxy(i,
     
     start_time = time.perf_counter()
     print(f"starting {i}th galaxy")
-
-    # x_o = torch.from_numpy(x_o).float()
     
     with torch.no_grad():
-        samples = posterior.sample((2000,), x=x_o, show_progress_bars=False).numpy()
+        samples = posterior.sample((2000,), x=x_o, show_progress_bars=True).numpy()
     
     end_time = time.perf_counter()
     print(f"Galaxy {i} took {end_time - start_time:.4f} seconds")
@@ -122,7 +121,8 @@ def sample_single_galaxy(i,
     return samples
 
 
-def run_mcmc(posterior, 
+def run_mcmc(test_x: list[torch.Tensor],
+             posterior, 
              n_galaxies_at_once:int) -> list[np.ndarray]:
     """
     Run MCMC for all the galaxies
@@ -142,6 +142,11 @@ def run_mcmc(posterior,
         for i, x_o in enumerate(test_x)
     )
     
+    # final_samples = []
+    # for i, x_o in enumerate(test_x):
+    #     samples = sample_single_galaxy(i, posterior, x_o)
+    #     final_samples.append(samples)
+    
     end_time = time.perf_counter()
     print(f"Total time for {len(test_x)} galaxies: {end_time - start_time:.2f} seconds")
     
@@ -158,12 +163,15 @@ def save_samples(samples:list[np.ndarray],
     """
 
     if len(samples) == 1:
-        save_csv(samples, file_path)
+        save_csv(samples[0], file_path)
     else:
         save_pickle(samples, file_path)
     
 
 if __name__ == "__main__":
+    
+    torch.set_num_threads(4)
+    
     # MCMC settings
     mcmc_settings = {"mcmc_method":"slice_np_vectorized", 
                      "mcmc_parameters":{"warmup_steps":500,
@@ -178,14 +186,14 @@ if __name__ == "__main__":
     
     test_x = prep_data(f"./8d_theta/model_1/mass_density_{prof}.csv",
                        train_x= "./8d_theta/model_1/train_x.csv")
-
+    
     posterior = prep_posterior(f"./8d_theta/model_1/inference.pkl",
                                mcmc_settings)
         
-    final_samples = run_mcmc(posterior, 1)
+    final_samples = run_mcmc(test_x, posterior, 1)
     
     save_samples(final_samples,
-                 f"8d_theta/model_1/samples_{prof}.csv")
+                 f"8d_theta/model_1/mass_density_samples_{prof}.csv")
 
 
 

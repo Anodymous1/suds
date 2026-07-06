@@ -68,6 +68,6 @@ if __name__ == "__main__":
     # save_csv(theta, "./8d_theta/model_1/test_theta.csv")
     # save_csv(x, "./8d_theta/model_1/test_x.csv")
     
-    x = generate_single([1, 3, 1, 0, 8.0755, 0, -0.6402, 0, 0], 100)
-    save_csv(x, "./8d_theta/model_1/mass_density_cusp.csv")
+    # x = generate_single([1, 3, 1, 0, 8.0755, 0, -0.6402, 0, 0], 100)
+    # save_csv(x, "./8d_theta/model_1/mass_density_cusp.csv")
     
