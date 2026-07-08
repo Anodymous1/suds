@@ -15,7 +15,7 @@ import pandas as pd
 import pickle
 import time
 from standardization import standardize
-from object_handler import save_pickle, save_csv, load_csv
+from object_handler import save_pickle, save_csv, load_csv, load_galaxies, load_pickle
 from joblib import Parallel, delayed
 
 # set agama unit to be in Msun, kpc, km/s
@@ -52,12 +52,10 @@ def prep_data(test_x: str,
     # Non-single galaxy
     if test_theta is not None:
         # testing dataset
-        test_theta_raw = load_csv(test_theta, "ndarray")
+        _, k = load_galaxies(test_theta, "ndarray")
 
         # reorder
-        _, index = np.unique(test_theta_raw, axis=0, return_index=True)
-        index = np.sort(index)
-        test_x = np.split(test_x_raw, index, axis=0)[1:]
+        test_x = np.split(test_x_raw, k, axis=0)
 
         return test_x[:num_entries]
     
@@ -79,11 +77,9 @@ def prep_posterior(model:str,
     - model: file location to the model
     """
     
-    with open(model, 'rb') as file:
-        # Load the object from the file
-        inference = pickle.load(file)
+    inference = load_pickle(model)
     
-    inference._neural_net.to("cpu")
+    # inference._neural_net.to("cpu")
     
     posterior = inference.build_posterior(**mcmc_settings)
     
@@ -175,7 +171,7 @@ if __name__ == "__main__":
     # MCMC settings
     mcmc_settings = {"mcmc_method":"slice_np_vectorized", 
                      "mcmc_parameters":{"warmup_steps":500,
-                                    "num_chains":8,
+                                    "num_chains":16,
                                     "num_workers": 1,
                                     "init_strategy": "sir",
                                     "thin": 1}}
@@ -185,26 +181,46 @@ if __name__ == "__main__":
     # prof = "core"
     
     # test_x = prep_data(f"./8d_theta/model_1/mass_density_{prof}.csv",
-    #                    train_x= "./8d_theta/model_1/train_x.csv")
+    #                    train_x= "./8d_theta/model_3/train_x.csv")
     
-    # posterior = prep_posterior(f"./8d_theta/model_1/inference.pkl",
+    # posterior = prep_posterior(f"./8d_theta/model_3/inference.pkl",
     #                            mcmc_settings)
         
     # final_samples = run_mcmc(test_x, posterior, 1)
     
     # save_samples(final_samples,
-    #              f"8d_theta/model_1/mass_density_samples_{prof}.csv")
+    #              f"8d_theta/model_3/mass_density_samples_{prof}_t.csv")
 
 
-
-    # Example code for normal evaluation
-    test_x = prep_data("./8d_theta/model_1/test_x.csv",
-                       test_theta="./8d_theta/model_1/test_theta.csv",
-                       train_x= "./8d_theta/model_1/train_x.csv")
-
-    posterior = prep_posterior("./8d_theta/model_1/inference.pkl",
-                               mcmc_settings)
-    final_samples = run_mcmc(test_x, posterior, 3)
+    # Example code for mass density (SNLE)
+    prof = "core"
+    test_x = prep_data(f"./8d_theta/model_1/mass_density_{prof}.csv",
+                       train_x= "./8d_theta/model_3/train_x.csv")
     
-    save_samples(final_samples,
-                 "8d_theta/model_1/samples.pkl")
+    
+        
+    def parallel(prof):
+        posterior = prep_posterior(f"./8d_theta/model_3/inference/inference_{prof}_r{i}.pkl",
+                                mcmc_settings)
+            
+        final_samples = run_mcmc(test_x, posterior, 1)
+        
+        save_samples(final_samples,
+                    f"8d_theta/model_3/inferernce/mass_density_samples_{prof}_r{i}.csv")
+        
+    for i in range(5):
+        Parallel(n_jobs=2, verbose=10)(delayed(parallel)(prof) for prof in ["core", "cusp"])
+        
+
+
+    # # Example code for normal evaluation
+    # test_x = prep_data("./8d_theta/model_1/test_x.csv",
+    #                    test_theta="./8d_theta/model_1/test_theta.csv",
+    #                    train_x= "./8d_theta/model_1/train_x.csv")
+
+    # posterior = prep_posterior("./8d_theta/model_1/inference.pkl",
+    #                            mcmc_settings)
+    # final_samples = run_mcmc(test_x, posterior, 3)
+    
+    # save_samples(final_samples,
+    #              "8d_theta/model_1/samples.pkl")

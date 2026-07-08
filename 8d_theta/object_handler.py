@@ -75,5 +75,23 @@ def load_csv(file_path:str, type:str) -> ndarray|Tensor:
         
     return df
         
+def load_galaxies(file_path:str, type:str) -> ndarray|Tensor:
+    """
+    Loads a csv file as a numpy array or torch tensor for galaxy
+    Returns the parameters and the number of stars in the galaxy
     
+    params:
+    - file_path: file directory
+    - type: output type
     
+    Preconditions:
+    - type in ["ndarray", "Tensor"]
+    """
+    df = load_csv(file_path, "Tensor")
+    theta, k = df[:,:-1], df[:,-1].long()
+    
+    if type == "ndarray":
+        theta = array(theta)
+        k = array(k)
+    
+    return theta, k 

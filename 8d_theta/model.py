@@ -17,7 +17,7 @@ import pandas as pd
 import pickle
 from standardization import standardize
 from prior_generation import generate_prior
-from object_handler import save_pickle, load_csv
+from object_handler import save_pickle, load_csv, load_galaxies
 
 
 torch.set_num_threads(16)
@@ -41,7 +41,9 @@ def prep_data(train_theta:str,
     - standardization: if standardization is needed
     """
 
-    train_theta = load_csv(train_theta, "Tensor")
+    theta, k = load_galaxies(train_theta, "Tensor")
+    train_theta = torch.repeat_interleave(theta, k, dim=0)
+    
     train_x_raw = load_csv(train_x, "Tensor")
 
     train_x = standardize(train_x_raw)[0] if standardization else train_x_raw

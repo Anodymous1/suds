@@ -20,7 +20,7 @@ def generate_data(num_galaxies:int,
                   poisson:bool = True, 
                   n_jobs:int = 1) -> tuple[torch.Tensor]:
     """
-    Generate the data
+    Generate the data in prepartion of saving as a csv file
     
     params:
     - num_galaxies: number of galaxies to generate
@@ -41,7 +41,7 @@ def generate_data(num_galaxies:int,
     else:
         n_stars = num_stars
 
-    theta = torch.repeat_interleave(theta, torch.Tensor(n_stars).long(), dim=0)
+    theta = torch.tensor(np.column_stack((theta, n_stars)))
     x = generate_galaxy_multiple(theta, n_stars, n_jobs)
     
     return theta, x
@@ -85,21 +85,24 @@ def compress(file:str, save_path:str):
     
 
 if __name__ == "__main__":
-    # Generate Dataset
-    theta, x = generate_data(100,
-                             1000,
-                             n_jobs=4)
-    for i in range(99):
-        t, x0 = generate_data(100,
-                             1000,
-                             n_jobs=4)
-        theta = torch.cat((theta, t), dim=0)
-        x = torch.cat((x, x0), dim=0)
+    # # Generate Dataset
+    # theta, x = generate_data(100,
+    #                          1000,
+    #                          n_jobs=4)
+    # for i in range(99):
+    #     t, x0 = generate_data(100,
+    #                          1000,
+    #                          n_jobs=4)
+    #     theta = torch.cat((theta, t), dim=0)
+    #     x = torch.cat((x, x0), dim=0)
     
-    save_csv(theta, "./8d_theta/model_3/train_theta.csv", override=True)
-    save_csv(x, "./8d_theta/model_3/train_x.csv", override=True)
+    # save_csv(theta, "./8d_theta/model_3/train_theta.csv", override=True)
+    # save_csv(x, "./8d_theta/model_3/train_x.csv", override=True)
     
-    # # Single
-    # x = generate_single([1, 3, 1, 0, 8.0755, 0, -0.6402, 0, 0], 100)
-    # save_csv(x, "./8d_theta/model_1/mass_density_cusp.csv")
+    # Single
+    x = generate_single([1, 3, 1, 8.0755, 0, -0.6402, 0, 0], 100)
+    save_csv(x, "./8d_theta/model_4/x_o_cusp.csv", override=True)
+    
+    # # Compress
+    # compress("./8d_theta/model_2/train_theta.csv", "./8d_theta/model_2/train_theta_new.csv")
     
