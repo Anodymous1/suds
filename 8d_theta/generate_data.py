@@ -10,7 +10,7 @@ import numpy as np
 import pandas as pd
 from galaxy_generation import generate_galaxy_multiple
 from prior_generation import generate_prior
-from object_handler import save_csv
+from object_handler import save_csv, load_csv
 
 torch.set_num_threads(1)
 
@@ -37,12 +37,11 @@ def generate_data(num_galaxies:int,
     theta = prior.sample((num_galaxies,))
     
     if poisson:
-        n_stars = torch.tensor(np.random.poisson(num_stars, size=num_galaxies))
+        n_stars = np.random.poisson(num_stars, size=num_galaxies)
     else:
         n_stars = num_stars
 
-
-    theta = torch.repeat_interleave(theta, n_stars, dim=0)
+    theta = torch.repeat_interleave(theta, torch.Tensor(n_stars).long(), dim=0)
     x = generate_galaxy_multiple(theta, n_stars, n_jobs)
     
     return theta, x
@@ -61,13 +60,46 @@ def generate_single(theta:list[float],
     
     return x
 
-if __name__ == "__main__":
-    theta, x = generate_data(100_000,
-                             100,
-                             n_jobs=4)
-    save_csv(theta, "./8d_theta/model_2/train_theta.csv")
-    save_csv(x, "./8d_theta/model_2/train_x.csv")
+def compress(file:str, save_path:str):
+    """
+    Compress train_theta files
     
+    Params:
+    - file: file path to train_theta
+    - save_path: where to save compressed file
+    """
+    # load data
+    df = load_csv(file, "ndarray")
+    
+    # Compress in np
+    _, i = np.unique(df, axis=0, return_index=True)
+    index = np.sort(i)
+    new_df = df[index]
+    
+    # add the number of stars to the end 
+    num = np.diff(np.concatenate((index, np.array([df.shape[0]]))))
+    a = np.column_stack((new_df,num))
+    
+    # save
+    save_csv(a, save_path)
+    
+
+if __name__ == "__main__":
+    # Generate Dataset
+    theta, x = generate_data(100,
+                             1000,
+                             n_jobs=4)
+    for i in range(99):
+        t, x0 = generate_data(100,
+                             1000,
+                             n_jobs=4)
+        theta = torch.cat((theta, t), dim=0)
+        x = torch.cat((x, x0), dim=0)
+    
+    save_csv(theta, "./8d_theta/model_3/train_theta.csv", override=True)
+    save_csv(x, "./8d_theta/model_3/train_x.csv", override=True)
+    
+    # # Single
     # x = generate_single([1, 3, 1, 0, 8.0755, 0, -0.6402, 0, 0], 100)
     # save_csv(x, "./8d_theta/model_1/mass_density_cusp.csv")
     

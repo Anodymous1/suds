@@ -110,7 +110,7 @@ def transform_params(theta: torch.Tensor) -> torch.Tensor:
 
     return torch.stack([alpha, beta, gamma, p_0, r_s, r_star, r_a, beta_0], dim=1)
 
-def _simulate_one_galaxy(theta: np.ndarray, num_stars: int) -> np.ndarray:
+def _simulate_one_galaxy(theta: torch.Tensor, num_stars: int) -> torch.Tensor:
     """
     Simulate one galaxy
     
@@ -122,8 +122,20 @@ def _simulate_one_galaxy(theta: np.ndarray, num_stars: int) -> np.ndarray:
     
     """
     model = _generate_galaxy(*theta)
-    stars, _ = model.sample(int(num_stars))
-    return stars
+    
+    star_list = []
+    remainder = num_stars % 100
+    chunks = num_stars // 100
+    
+    if remainder > 0:
+        stars, _ = model.sample(remainder)
+        star_list.append(stars)
+
+    for i in range(chunks):
+        stars, _ = model.sample(100)
+        star_list.append(stars)
+        
+    return torch.tensor(np.vstack(star_list)).float()
 
 
 def generate_galaxy_multiple(theta: torch.Tensor, n_stars: np.ndarray, n_jobs: int) -> torch.Tensor:
@@ -147,11 +159,11 @@ def generate_galaxy_multiple(theta: torch.Tensor, n_stars: np.ndarray, n_jobs: i
     for row, n in zip(transformed_theta, n_stars)
     )
     
-    samples_np = np.vstack(results)
+    samples_np = torch.cat(results, dim=0)
     
-    out = np.zeros((samples_np.shape[0],3))
+    out = torch.zeros((samples_np.shape[0],3))
     out[:,0] = samples_np[:, 0]
     out[:,1] = samples_np[:, 1]
     out[:,2] = samples_np[:, -1]
     
-    return torch.from_numpy(out).to(torch.float32)  # sbi requires float 32
+    return out  # sbi requires float 32

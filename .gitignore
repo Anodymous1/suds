@@ -12,4 +12,7 @@
 8d_theta/model_2/train_theta.csv
 8d_theta/model_2/train_x.csv
 8d_theta/model_2/inference.pkl
+8d_theta/model_3/train_theta.csv
+8d_theta/model_3/train_x.csv
+8d_theta/model_3/inference.pkl
 sbi-logs

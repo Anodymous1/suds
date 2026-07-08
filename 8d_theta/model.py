@@ -20,7 +20,7 @@ from prior_generation import generate_prior
 from object_handler import save_pickle, load_csv
 
 
-torch.set_num_threads(4)
+torch.set_num_threads(16)
 
 # set agama unit to be in Msun, kpc, km/s
 agama.setUnits(mass=1 * u.Msun, length=1*u.kpc, velocity=1 * u.km /u.s)
@@ -91,8 +91,8 @@ def train_model(inference:SNLE,
 
 
 if __name__ == "__main__":
-    train_theta, train_x = prep_data("./8d_theta/model_1/train_theta.csv",
-                                     "./8d_theta/model_1/train_x.csv")
+    train_theta, train_x = prep_data("./8d_theta/model_3/train_theta.csv",
+                                     "./8d_theta/model_3/train_x.csv")
 
 
     likelihood_estimator_settings = {"model":"nsf", 
@@ -121,5 +121,5 @@ if __name__ == "__main__":
     
     inference = train_model(inference, arg)
     
-    save_pickle(inference, "./8d_theta/model_1/inference.pkl")
+    save_pickle(inference, "./8d_theta/model_3/inference.pkl")
 

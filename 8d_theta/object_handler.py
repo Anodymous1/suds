@@ -13,33 +13,35 @@ def _is_overwrite(file_path:str):
     """
     
     if os.path.exists(file_path):
-        print(f"Warning: {file_path} already exists. Skipped saving to prevent overwriting.")
+        print(f"Warning: {file_path} already exists.")
         return True
     else: 
         return False
     
     
-def save_csv(obj:ndarray|Tensor, file_path:str) -> None:
+def save_csv(obj:ndarray|Tensor, file_path:str, override:bool = False) -> None:
     """
     Saves a csv file using pandas
     
     params:
     - obj: the object
     - file_path: save to file path
+    - override: True if overide the overwrite protection
     """
-    if not _is_overwrite(file_path):
+    if not _is_overwrite(file_path) or override:
         pd.DataFrame(obj).to_csv(file_path, index=None, header=None)
         
-def save_pickle(obj:Any, file_path:str) -> None:
+def save_pickle(obj:Any, file_path:str, override:bool = False) -> None:
     """
     Saves a .pkl file using pickle
     
     params:
     - obj: the object
     - file_path: save to file path
+    - override: True if overide the overwrite protection
     """
     
-    if not _is_overwrite(file_path):
+    if not _is_overwrite(file_path) or override:
         with open(file_path, "wb") as handle:
             pickle.dump(obj, handle)
 
