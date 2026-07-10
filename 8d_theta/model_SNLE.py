@@ -26,7 +26,6 @@ random.seed(13)
 
 def initialize_training(file_path_model: str,
                         x_o_path:str,
-                        likelihood_estimator_settings: dict[str, str|int],
                         mcmc_settings: dict[str, str|dict[str,str|int]],
                         file_path_standardize: str|None) -> tuple[SNLE, int|None]:
     """
@@ -46,7 +45,6 @@ def initialize_training(file_path_model: str,
     x_o = load_csv(x_o_path, "Tensor")
     
     inference = load_pickle(file_path_model)
-    inference._build_posterior = likelihood_nn(**likelihood_estimator_settings)
     proposal = generate_proposal(inference, mcmc_settings, x_o)
         
     
@@ -81,7 +79,7 @@ def generate_new_data(proposal,
     if (std_mean is not None) or (std_std is not None):
         new_x = (new_x - std_mean) / std_std
     
-    new_theta = torch.repeat_interleave(theta, n_stars, dim=0)
+    new_theta = torch.repeat_interleave(theta, torch.tensor(n_stars).long(), dim=0)
     
     return new_theta, new_x
  
@@ -133,7 +131,6 @@ def train_model(file_path_model: str,
     
     inference, proposal, std_mean, std_std, x_o = initialize_training(file_path_model,
                                                                       x_o_path,
-                                                                      likelihood_estimator_settings,
                                                                       mcmc_settings,
                                                                       file_path_standardize=file_path_standardize)
 
@@ -144,6 +141,9 @@ def train_model(file_path_model: str,
         print(f"Beginning round {i}")
         
         start_time = time.perf_counter()
+        inference._build_posterior = likelihood_nn(**likelihood_estimator_settings)
+        
+        
         new_theta, new_x = generate_new_data(proposal,
                                              num_samples,
                                              std_mean,
@@ -154,6 +154,7 @@ def train_model(file_path_model: str,
         # new proposal
         proposal = generate_proposal(inference, mcmc_settings, x_o)
         
+        inference._build_posterior = None
         # save model
         save_pickle(inference, f"{file_path_save}/inference_r{i}.pkl")
         
@@ -194,6 +195,7 @@ if __name__ == "__main__":
     
     prof = "cusp"
     
+    print(prof)
     train_model("./8d_theta/model_1/inference.pkl",
                 f"./8d_theta/model_4/x_o_{prof}.csv",
                 f"./8d_theta/model_4/inference_{prof}",

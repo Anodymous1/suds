@@ -20,7 +20,7 @@ from prior_generation import generate_prior
 from object_handler import save_pickle, load_csv, load_galaxies
 
 
-torch.set_num_threads(16)
+torch.set_num_threads(4)
 
 # set agama unit to be in Msun, kpc, km/s
 agama.setUnits(mass=1 * u.Msun, length=1*u.kpc, velocity=1 * u.km /u.s)
