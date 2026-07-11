@@ -82,27 +82,46 @@ def compress(file:str, save_path:str):
     
     # save
     save_csv(a, save_path)
+
+def dimension_reduction(file:str, save_path:str):
+    """
+    Reduce the dimension of stellar kinematics, from 3 dimensional to 2 dimensional
+    The parameter R will be used in place of x and y
+    
+    Params:
+    - file: file path to train_theta
+    - save_path: where to save compressed file
+    """
+    df = load_csv(file, "ndarray")
+    new_array = np.zeros((df.shape[0], 2))
+    new_array[:,0] = np.sqrt(df[:,0] ** 2 + df[:, 1] ** 2)
+    new_array[:,1] = df[:,2]
+    
+    save_csv(new_array, save_path)
     
 
 if __name__ == "__main__":
     # # Generate Dataset
     # theta, x = generate_data(100,
-    #                          1000,
+    #                          100,
     #                          n_jobs=4)
     # for i in range(99):
     #     t, x0 = generate_data(100,
-    #                          1000,
+    #                          100,
     #                          n_jobs=4)
     #     theta = torch.cat((theta, t), dim=0)
     #     x = torch.cat((x, x0), dim=0)
     
-    # save_csv(theta, "./8d_theta/model_3/train_theta.csv", override=True)
-    # save_csv(x, "./8d_theta/model_3/train_x.csv", override=True)
+    # save_csv(theta, "./8d_theta/model_5/train_theta.csv", override=False)
+    # save_csv(x, "./8d_theta/model_5/train_x.csv", override=False)
     
-    # Single
-    x = generate_single([1, 3, 1, 8.0755, 0, -0.6402, 0, 0], 100)
-    save_csv(x, "./8d_theta/model_4/x_o_cusp.csv", override=True)
+    # # Single
+    # x = generate_single([1, 3, 1, 8.0755, 0, -0.6402, 0, 0], 100)
+    # save_csv(x, "./8d_theta/model_4/x_o_cusp.csv", override=True)
     
     # # Compress
     # compress("./8d_theta/model_2/train_theta.csv", "./8d_theta/model_2/train_theta_new.csv")
+    
+    # Reduce dimension
+    dimension_reduction("./8d_theta/model_5/train_x.csv", "./8d_theta/model_6/train_x.csv")
     

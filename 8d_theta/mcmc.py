@@ -178,43 +178,43 @@ if __name__ == "__main__":
                                         
                                         
     # Example code for mass density
-    # prof = "cusp"
+    prof = "core"
     
-    # print(prof)
-    # test_x = prep_data(f"./8d_theta/model_1/mass_density_{prof}.csv",
-    #                    train_x= "./8d_theta/model_2/train_x.csv")
+    print(prof)
+    test_x = prep_data(f"./8d_theta/model_1/mass_density_{prof}.csv",
+                       train_x= "./8d_theta/model_5/train_x.csv")
     
-    # posterior = prep_posterior(f"./8d_theta/model_2/inference.pkl",
-    #                            mcmc_settings)
+    posterior = prep_posterior(f"./8d_theta/model_5/inference_2048.pkl",
+                               mcmc_settings)
         
-    # final_samples = run_mcmc(test_x, posterior, 1)
+    final_samples = run_mcmc(test_x, posterior, 1)
     
-    # save_samples(final_samples,
-    #              f"8d_theta/model_2/mass_density_samples_{prof}.csv")
+    save_samples(final_samples,
+                 f"8d_theta/model_5/mass_density_samples_{prof}_2048.csv")
 
 
-    # Example code for mass density (SNLE)
+    # # Example code for mass density (SNLE)
         
-    test_x_core = prep_data(f"./8d_theta/model_1/mass_density_core.csv",
-            train_x= "./8d_theta/model_3/train_x.csv")
-    test_x_cusp = prep_data(f"./8d_theta/model_1/mass_density_cusp.csv",
-            train_x= "./8d_theta/model_3/train_x.csv")
+    # test_x_core = prep_data(f"./8d_theta/model_1/mass_density_core.csv",
+    #         train_x= "./8d_theta/model_3/train_x.csv")
+    # test_x_cusp = prep_data(f"./8d_theta/model_1/mass_density_cusp.csv",
+    #         train_x= "./8d_theta/model_3/train_x.csv")
     
-    def parallel(prof):
-        posterior = prep_posterior(f"./8d_theta/model_4/inference_{prof}/inference_r{i}.pkl",
-                                mcmc_settings)
-        if prof == "core":
-            test_x = test_x_core
-        elif prof == "cusp":
-            test_x = test_x_cusp
+    # def parallel(prof):
+    #     posterior = prep_posterior(f"./8d_theta/model_4/inference_{prof}/inference_r{i}.pkl",
+    #                             mcmc_settings)
+    #     if prof == "core":
+    #         test_x = test_x_core
+    #     elif prof == "cusp":
+    #         test_x = test_x_cusp
             
-        final_samples = run_mcmc(test_x, posterior, 1)
+    #     final_samples = run_mcmc(test_x, posterior, 1)
         
-        save_samples(final_samples,
-                    f"8d_theta/model_4/inferernce_{prof}/mass_density_samples_r{i}.csv")
+    #     save_samples(final_samples,
+    #                 f"8d_theta/model_4/inferernce_{prof}/mass_density_samples_r{i}.csv")
         
-    for i in range(5):
-        Parallel(n_jobs=2, verbose=10)(delayed(parallel)(prof) for prof in ["core", "cusp"])
+    # for i in range(5):
+    #     Parallel(n_jobs=2, verbose=10)(delayed(parallel)(prof) for prof in ["core", "cusp"])
         
 
 

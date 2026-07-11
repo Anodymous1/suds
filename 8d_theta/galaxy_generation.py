@@ -110,18 +110,17 @@ def transform_params(theta: torch.Tensor) -> torch.Tensor:
 
     return torch.stack([alpha, beta, gamma, p_0, r_s, r_star, r_a, beta_0], dim=1)
 
-def _simulate_one_galaxy(theta: torch.Tensor, num_stars: int) -> torch.Tensor:
+def _sample_galaxy(model, num_stars: int) -> np.ndarray:
     """
-    Simulate one galaxy
+    Simulate one galaxy and sample from it
     
-    returns the generated stars
+    returns the generated stars before filtering
     
     params:
-    - theta: theta
+    - model: the galaxy model already set up
     - num_stars: number of stars in the galaxy
     
     """
-    model = _generate_galaxy(*theta)
     
     star_list = []
     remainder = num_stars % 100
@@ -134,8 +133,37 @@ def _simulate_one_galaxy(theta: torch.Tensor, num_stars: int) -> torch.Tensor:
     for i in range(chunks):
         stars, _ = model.sample(100)
         star_list.append(stars)
-        
-    return torch.tensor(np.vstack(star_list)).float()
+    
+    galaxy = np.vstack(star_list)
+    return galaxy
+
+
+def _simulate_one_galaxy(theta: torch.Tensor, num_stars: int) -> torch.Tensor:
+    """
+    Simulate one galaxy, then filtering the stars
+    
+    returns the generated (filtered) stars
+    
+    params:
+    - theta: a single theta
+    - num_stars: number of stars in the galaxy
+    
+    """
+    theta = theta.tolist()
+    model = _generate_galaxy(*theta)
+    galaxy = _sample_galaxy(model, num_stars)
+
+    r_star = theta[5]
+    
+    #  filter out v_los > 1000, r > 20 * r_star
+    condition = (galaxy[:,5] > 1000) | (np.sqrt(galaxy[:,0] ** 2 + galaxy[:,1] ** 2) > 20 * r_star)
+    while np.count_nonzero(condition) != 0:
+        new_star = _sample_galaxy(model, np.count_nonzero(condition))
+        galaxy[condition] = new_star
+        condition = (galaxy[:,5] > 1000) | (np.sqrt(galaxy[:,0] ** 2 + galaxy[:,1] ** 2) > 20 * r_star)
+
+    return torch.tensor(galaxy).float()
+
 
 
 def generate_galaxy_multiple(theta: torch.Tensor, n_stars: np.ndarray, n_jobs: int) -> torch.Tensor:

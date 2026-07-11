@@ -93,8 +93,8 @@ def train_model(inference:SNLE,
 
 
 if __name__ == "__main__":
-    train_theta, train_x = prep_data("./8d_theta/model_3/train_theta.csv",
-                                     "./8d_theta/model_3/train_x.csv")
+    train_theta, train_x = prep_data("./8d_theta/model_5/train_theta.csv",
+                                     "./8d_theta/model_5/train_x.csv")
 
 
     likelihood_estimator_settings = {"model":"nsf", 
@@ -107,7 +107,7 @@ if __name__ == "__main__":
                                likelihood_estimator_settings=likelihood_estimator_settings)
 
     arg = {
-            "training_batch_size": 1024,
+            "training_batch_size": 2048,
             "learning_rate": 0.0017034433770023658,
             "validation_fraction": 0.1,
             "stop_after_epochs": 20,
@@ -123,5 +123,5 @@ if __name__ == "__main__":
     
     inference = train_model(inference, arg)
     
-    save_pickle(inference, "./8d_theta/model_3/inference.pkl")
+    save_pickle(inference, "./8d_theta/model_5/inference_2048.pkl")
 

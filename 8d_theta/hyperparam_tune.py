@@ -31,7 +31,7 @@ def objective(trial):
     # Normalizing flow
     model = trial.suggest_categorical("model", ["maf", "nsf"])
     hidden_features = trial.suggest_int("hidden_features", 32, 128)
-    num_transforms = trial.suggest_int("num_transforms", 3, 8)
+    num_transforms = trial.suggest_int("num_transforms", 3, 12)
     num_bins = trial.suggest_int("num_bins", 4, 12)
     patience = 10
     
@@ -68,16 +68,16 @@ if __name__ == "__main__":
     np.random.seed(13)
 
 
-    train_theta, train_x = prep_data("./8d_theta/model_1/train_theta.csv",
-                                     "./8d_theta/model_1/train_x.csv",
+    train_theta, train_x = prep_data("./8d_theta/model_6/train_theta.csv",
+                                     "./8d_theta/model_6/train_x.csv",
                                      standardization=True)
     train_theta, train_x = train_theta[:199983], train_x[:199983]
 
-    study = load_pickle("./8d_theta/model_1/tune.pkl")
+    # study = load_pickle("./8d_theta/model_1/tune.pkl")
     
-    # study = optuna.create_study(direction="maximize")
+    study = optuna.create_study(direction="maximize")
     study.optimize(objective, n_trials=50)
 
-    save_pickle(study, "./8d_theta/model_1/tune_r2.pkl")
+    save_pickle(study, "./8d_theta/model_6/tune.pkl")
 
 
