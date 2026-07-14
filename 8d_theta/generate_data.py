@@ -17,6 +17,8 @@ torch.set_num_threads(1)
 
 def generate_data(num_galaxies:int, 
                   num_stars:int, 
+                  dim:int,
+                  uncertainty:bool = False,
                   poisson:bool = True, 
                   n_jobs:int = 1) -> tuple[torch.Tensor]:
     """
@@ -25,6 +27,8 @@ def generate_data(num_galaxies:int,
     params:
     - num_galaxies: number of galaxies to generate
     - num_stars: the number of stars per galaxy, it is the mean of the poisson distribution if poisson=True
+    - dim: dimension of x
+    - uncertainty: to include uncertainty in the inference or not
     - poisson: use the poisson distribution to determine the number of stars to generate
     - n_jobs: number of CPU cores used to generate the data
     
@@ -37,32 +41,42 @@ def generate_data(num_galaxies:int,
     theta = prior.sample((num_galaxies,))
     
     if poisson:
-        n_stars = np.random.poisson(num_stars, size=num_galaxies)
+        rates = torch.full((num_galaxies,), num_stars, dtype=torch.float32)
+        n_stars = torch.poisson(rates).long()
     else:
         n_stars = num_stars
 
-    theta = torch.tensor(np.column_stack((theta, n_stars)))
-    x = generate_galaxy_multiple(theta, n_stars, n_jobs)
+    if not uncertainty:
+        theta = torch.column_stack((theta, n_stars))
+        x = generate_galaxy_multiple(theta, n_stars, dim, n_jobs=n_jobs)
+    else:
+        theta = torch.repeat_interleave(theta, n_stars, dim=0)
+        x, uncertainties = generate_galaxy_multiple(theta, n_stars, dim, uncertainty=True, n_jobs=n_jobs)
+        theta = torch.column_stack((theta, uncertainties))
     
     return theta, x
     
 def generate_single(theta:list[float], 
-                    n_stars:int):
+                    n_stars:int,
+                    dim:int,
+                    uncertainty:bool = False):
     """
     Generate a single galaxy
     
     Params:
     - theta: the parameters of the desired galaxies
     - n_stars: number of stars in the galaxy
+    - dim: dimension of x
+    - uncertainty: to include uncertainty in the inference or not
     """
     
-    x = generate_galaxy_multiple(torch.tensor([theta]), [n_stars], 1)
-    
-    return x
+    if not uncertainty:
+        x = generate_galaxy_multiple(torch.tensor([theta]), [n_stars], dim, n_jobs=1)
+        return x
 
 def compress(file:str, save_path:str):
     """
-    Compress train_theta files
+    Compress train_theta files, only works for data without uncertainty
     
     Params:
     - file: file path to train_theta
@@ -85,7 +99,8 @@ def compress(file:str, save_path:str):
 
 def dimension_reduction(file:str, save_path:str):
     """
-    Reduce the dimension of stellar kinematics, from 3 dimensional to 2 dimensional
+    Reduce the dimension of stellar kinematics, from 3 dimensional to 2 dimensional,\
+        or from 5 dimensional to 3 dimensional
     The parameter R will be used in place of x and y
     
     Params:
@@ -93,27 +108,35 @@ def dimension_reduction(file:str, save_path:str):
     - save_path: where to save compressed file
     """
     df = load_csv(file, "ndarray")
-    new_array = np.zeros((df.shape[0], 2))
-    new_array[:,0] = np.sqrt(df[:,0] ** 2 + df[:, 1] ** 2)
-    new_array[:,1] = df[:,2]
     
+    if df.shape[1] == 3:
+        new_array = np.zeros((df.shape[0], 2))
+        new_array[:,0] = np.sqrt(df[:,0] ** 2 + df[:, 1] ** 2)
+        new_array[:,1] = df[:,2]
+    elif df.shape[0] == 5:
+        new_array = df[:, (0, 1, 4)]
+
     save_csv(new_array, save_path)
     
 
 if __name__ == "__main__":
-    # # Generate Dataset
-    # theta, x = generate_data(100,
-    #                          100,
-    #                          n_jobs=4)
-    # for i in range(99):
-    #     t, x0 = generate_data(100,
-    #                          100,
-    #                          n_jobs=4)
-    #     theta = torch.cat((theta, t), dim=0)
-    #     x = torch.cat((x, x0), dim=0)
+    # Generate Dataset
+    theta, x = generate_data(100,
+                             100,
+                             5,
+                             uncertainty=True,
+                             n_jobs=4)
+    for i in range(99):
+        t, x0 = generate_data(100,
+                             100,
+                             5,
+                             uncertainty=True,
+                             n_jobs=4)
+        theta = torch.cat((theta, t), dim=0)
+        x = torch.cat((x, x0), dim=0)
     
-    # save_csv(theta, "./8d_theta/model_5/train_theta.csv", override=False)
-    # save_csv(x, "./8d_theta/model_5/train_x.csv", override=False)
+    save_csv(theta, "./8d_theta/model_7/5d/train_theta.csv", override=False)
+    save_csv(x, "./8d_theta/model_7/5d/train_x.csv", override=False)
     
     # # Single
     # x = generate_single([1, 3, 1, 8.0755, 0, -0.6402, 0, 0], 100)
@@ -123,5 +146,5 @@ if __name__ == "__main__":
     # compress("./8d_theta/model_2/train_theta.csv", "./8d_theta/model_2/train_theta_new.csv")
     
     # Reduce dimension
-    dimension_reduction("./8d_theta/model_5/train_x.csv", "./8d_theta/model_6/train_x.csv")
+    # dimension_reduction("./8d_theta/model_5/train_x.csv", "./8d_theta/model_6/train_x.csv")
     

@@ -31,7 +31,8 @@ np.random.seed(13)
 
 def prep_data(train_theta:str,
               train_x:str,
-              standardization: bool = True) -> tuple[torch.Tensor]:
+              standardization: bool = True,
+              uncertainty:bool = False) -> tuple[torch.Tensor]:
     """
     Prepare the data for training
     
@@ -39,10 +40,14 @@ def prep_data(train_theta:str,
     - train_theta: file path to training theta
     - train_x: file path to training x
     - standardization: if standardization is needed
+    - uncertainty: to include uncertainty in the inference or not; use to determine file format
     """
 
-    theta, k = load_galaxies(train_theta, "Tensor")
-    train_theta = torch.repeat_interleave(theta, k, dim=0)
+    if not uncertainty:
+        theta, k = load_galaxies(train_theta, "Tensor")
+        train_theta = torch.repeat_interleave(theta, k, dim=0)
+    else:
+        train_theta = load_csv(train_theta, "Tensor")
     
     train_x_raw = load_csv(train_x, "Tensor")
 
@@ -54,6 +59,7 @@ def prep_data(train_theta:str,
 def prep_inference(train_theta: torch.Tensor,
                    train_x: torch.Tensor,
                    likelihood_estimator_settings: dict[str, str | int] | None = None, 
+                   uncertainty:bool = False
                    ) -> SNLE:
     """
     Prepare the inference for training
@@ -62,9 +68,10 @@ def prep_inference(train_theta: torch.Tensor,
     - train_theta: The tensor of trarining thetas
     - train_x: The tensor of trarining x's
     - likelihood_settings: the settings for customized structures. None if default settings 
+    - uncertainty: to include uncertainty in the inference or not; used for generating the prior
     """
 
-    prior_sbi = generate_prior()
+    prior_sbi = generate_prior(uncertainty=uncertainty)
 
     if likelihood_estimator_settings is not None:
         density_estimator =likelihood_nn(**likelihood_estimator_settings)
@@ -97,18 +104,18 @@ if __name__ == "__main__":
                                      "./8d_theta/model_5/train_x.csv")
 
 
-    likelihood_estimator_settings = {"model":"nsf", 
-                                    "hidden_features": 128,
-                                    "num_transforms": 8,
-                                    "num_bins": 8}
+    likelihood_estimator_settings = {"model":"maf", 
+                                    "hidden_features": 83,
+                                    "num_transforms": 4,
+                                    "num_bins": 4}
     
     inference = prep_inference(train_theta,
                                train_x,
                                likelihood_estimator_settings=likelihood_estimator_settings)
 
     arg = {
-            "training_batch_size": 2048,
-            "learning_rate": 0.0017034433770023658,
+            "training_batch_size": 1024,
+            "learning_rate": 5.6027428891404e-05,
             "validation_fraction": 0.1,
             "stop_after_epochs": 20,
             "max_num_epochs": 2 ** 31 - 1,
@@ -123,5 +130,5 @@ if __name__ == "__main__":
     
     inference = train_model(inference, arg)
     
-    save_pickle(inference, "./8d_theta/model_5/inference_2048.pkl")
+    save_pickle(inference, "./8d_theta/model_5/inference_v2.pkl")
 

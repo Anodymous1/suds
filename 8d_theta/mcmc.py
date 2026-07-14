@@ -138,10 +138,6 @@ def run_mcmc(test_x: list[torch.Tensor],
         for i, x_o in enumerate(test_x)
     )
     
-    # final_samples = []
-    # for i, x_o in enumerate(test_x):
-    #     samples = sample_single_galaxy(i, posterior, x_o)
-    #     final_samples.append(samples)
     
     end_time = time.perf_counter()
     print(f"Total time for {len(test_x)} galaxies: {end_time - start_time:.2f} seconds")
@@ -178,19 +174,19 @@ if __name__ == "__main__":
                                         
                                         
     # Example code for mass density
-    prof = "core"
+    prof = "cusp"
     
     print(prof)
     test_x = prep_data(f"./8d_theta/model_1/mass_density_{prof}.csv",
                        train_x= "./8d_theta/model_5/train_x.csv")
     
-    posterior = prep_posterior(f"./8d_theta/model_5/inference_2048.pkl",
+    posterior = prep_posterior(f"./8d_theta/model_5/inference_v2.pkl",
                                mcmc_settings)
         
     final_samples = run_mcmc(test_x, posterior, 1)
     
     save_samples(final_samples,
-                 f"8d_theta/model_5/mass_density_samples_{prof}_2048.csv")
+                 f"8d_theta/model_5/mass_density_samples_{prof}_v2.csv")
 
 
     # # Example code for mass density (SNLE)

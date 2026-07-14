@@ -1,21 +1,21 @@
 import torch 
 from sbi.utils import BoxUniform
+from parameter_bounds import mins_with_uncertainty, mins_without_uncertainty, maxs_with_uncertainty, maxs_without_uncertainty
 
 
-
-def generate_prior():
+def generate_prior(uncertainty=False):
     """
     Generate the prior assuming the uniform distribution
     
     order of theta: 
     alpha, beta, gamma, log(p_0), log(r_s), log(r_star/r_s), log(r_a / r_star), beta_0
     """
-    
 
-    low = torch.tensor([0.5, 2, -1, 3, -2, -3, -1, -0.5])
-    high = torch.tensor([3, 10, 2, 10, 2, 0, 3, 1])
 
     # Create uniform distribution
-    prior = BoxUniform(low=low, high=high)
+    if not uncertainty:
+        prior = BoxUniform(low=mins_without_uncertainty, high=maxs_without_uncertainty)
+    if uncertainty:
+        prior = BoxUniform(low=mins_with_uncertainty, high=maxs_with_uncertainty)
 
     return prior

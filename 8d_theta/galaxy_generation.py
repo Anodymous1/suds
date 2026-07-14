@@ -9,6 +9,7 @@ import torch
 import numpy as np
 from astropy import units as u
 from joblib import Parallel, delayed
+from parameter_bounds import log_uncertainty_min, log_uncertainty_max
 # set agama unit to be in Msun, kpc, km/s
 agama.setUnits(mass=1 * u.Msun, length=1*u.kpc, velocity=1 * u.km /u.s)
 agama.setRandomSeed(13)
@@ -166,35 +167,47 @@ def _simulate_one_galaxy(theta: torch.Tensor, num_stars: int) -> torch.Tensor:
 
 
 
-def generate_galaxy_multiple(theta: torch.Tensor, n_stars: np.ndarray, n_jobs: int) -> torch.Tensor:
+def generate_galaxy_multiple(theta: torch.Tensor, 
+                             n_stars: torch.Tensor, 
+                             dim: int,
+                             uncertainty: bool = False,
+                             n_jobs: int = 1) -> torch.Tensor:
     """
     Generate the galaxy model with multiple stars given theta 
 
     returns a matrix of stars for each theta
 
     - theta: tensor of sampled theta with columns \
-        alpha, beta, gamma, log(p_0), log(r_s), log(r_star/r_s), log(r_a / r_star), beta_0
+        alpha, beta, gamma, log(p_0), log(r_s), log(r_star/r_s), log(r_a / r_star), beta_0 \
+        and DOES NOT include uncertainty
     - n_stars: the number of stars to generate for each corresponding theta
+    - dim: dimension of dataset
+    - uncertainty: to include uncertainty in the inference or not
     - n_jobs: the number of threads to use to use in the generation process
     """
     transformed_theta = transform_params(theta)
     
-    # torch.set_num_threads(1)
-    # agama.setUnits(mass=1 * u.Msun, length=1*u.kpc, velocity=1 * u.km /u.s)
-    # agama.setRandomSeed(13)
-    # torch.manual_seed(13)
-    # np.random.seed(13)
-    
     results = Parallel(n_jobs=n_jobs)(
     delayed(_simulate_one_galaxy)(row, n) 
-    for row, n in zip(transformed_theta, n_stars)
+    for row, n in zip(transformed_theta, n_stars.tolist())
     )
     
-    samples_np = torch.cat(results, dim=0)
+    samples_tor = torch.cat(results, dim=0)
     
-    out = torch.zeros((samples_np.shape[0],3))
-    out[:,0] = samples_np[:, 0]
-    out[:,1] = samples_np[:, 1]
-    out[:,2] = samples_np[:, -1]
+    if dim == 3:
+        out = samples_tor[:,(0, 1, 5)]
+    elif dim == 2:
+        out = torch.zeros((samples_tor.shape[0],2))
+        out[:,0] = torch.sqrt(samples_tor[:, 0] ** 2  + samples_tor[:, 1] ** 2)
+        out[:,1] = samples_tor[:, 5]
+    elif dim == 5:
+        out = samples_tor[:,(0,1,3,4,5)]
     
-    return out  # sbi requires float 32
+    if uncertainty:
+        # Generate uncertianty
+        dist = torch.distributions.Uniform(log_uncertainty_min, log_uncertainty_max) # Log uniform as jeffrey's prior works out to this
+        log_uncertainties = dist.sample(out[:, 2:].shape) # [:, 2:] because only columns starting from the third one is velocity
+        out[:, 2:] = torch.normal(out[:, 2:], 10 ** log_uncertainties) # Sample from Gaussian
+        return out, log_uncertainties
+    else:
+        return out
