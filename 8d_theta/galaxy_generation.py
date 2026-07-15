@@ -157,11 +157,14 @@ def _simulate_one_galaxy(theta: torch.Tensor, num_stars: int) -> torch.Tensor:
     r_star = theta[5]
     
     #  filter out v_los > 1000, r > 20 * r_star
-    condition = (galaxy[:,5] > 1000) | (np.sqrt(galaxy[:,0] ** 2 + galaxy[:,1] ** 2) > 20 * r_star)
-    while np.count_nonzero(condition) != 0:
-        new_star = _sample_galaxy(model, np.count_nonzero(condition))
-        galaxy[condition] = new_star
-        condition = (galaxy[:,5] > 1000) | (np.sqrt(galaxy[:,0] ** 2 + galaxy[:,1] ** 2) > 20 * r_star)
+    def condition(galaxy):
+        return (np.abs(galaxy[:,5]) > 1000) | (np.sqrt(galaxy[:,0] ** 2 + galaxy[:,1] ** 2) > 20 * r_star)
+    
+    cond = condition(galaxy)
+    while np.count_nonzero(cond) != 0:
+        new_star = _sample_galaxy(model, np.count_nonzero(cond))
+        galaxy[cond] = new_star
+        cond = condition(galaxy)
 
     return torch.tensor(galaxy).float()
 

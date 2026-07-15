@@ -3,57 +3,20 @@ import agama
 import torch 
 import numpy as np
 from astropy import units as u
-from sbi.inference import likelihood_estimator_based_potential, MCMCPosterior
-from sbi.inference.potentials.likelihood_based_potential import LikelihoodBasedPotential, _log_likelihoods_over_trials
-from sbi.analysis import conditional_potential
+from sbi.inference import  MCMCPosterior
+from sbi.inference.potentials.likelihood_based_potential import LikelihoodBasedPotential
 from sbi.utils import mcmc_transform
-import time
-from standardization import standardize
-from object_handler import save_pickle, save_csv, load_csv, load_galaxies, load_pickle
-from joblib import Parallel, delayed
-from prior_generation import generate_prior
-# set agama unit to be in Msun, kpc, km/s
 import torch
 from torch import Tensor, nn
 from torch.distributions import Distribution
 
-from sbi.inference.potentials.base_potential import BasePotential
-from sbi.neural_nets.mnle import MixedDensityEstimator
-# from sbi.types import TorchTransform
 from sbi.utils import mcmc_transform
-from sbi.utils.sbiutils import match_theta_and_x_batch_shapes
 from sbi.utils.torchutils import atleast_2d
-from functools import partial
-from math import ceil
-from typing import Any, Callable, Dict, Optional, Tuple, Union
-from warnings import warn
+from typing import Any, Callable, Optional, Tuple, Union
 
-import arviz as az
 import torch
-import torch.distributions.transforms as torch_tf
 from arviz.data import InferenceData
-from joblib import Parallel, delayed
-from numpy import ndarray
-from pyro.infer.mcmc import HMC, NUTS
-from pyro.infer.mcmc.api import MCMC
 from torch import Tensor
-from torch import multiprocessing as mp
-from tqdm.auto import tqdm
-
-from sbi.inference.posteriors.base_posterior import NeuralPosterior
-from sbi.samplers.mcmc import (
-    IterateParameters,
-    Slice,
-    SliceSamplerSerial,
-    SliceSamplerVectorized,
-    proposal_init,
-    resample_given_potential_fn,
-    sir_init,
-)
-from sbi.simulators.simutils import tqdm_joblib
-from sbi.types import Shape, TorchTransform
-from sbi.utils import pyro_potential_wrapper, tensor2numpy, transformed_potential
-from sbi.utils.torchutils import ensure_theta_batched
 
 agama.setUnits(mass=1 * u.Msun, length=1*u.kpc, velocity=1 * u.km /u.s)
 

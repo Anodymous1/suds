@@ -68,8 +68,8 @@ if __name__ == "__main__":
     np.random.seed(13)
 
 
-    train_theta, train_x = prep_data("./8d_theta/model_7/5d/train_theta.csv",
-                                     "./8d_theta/model_7/5d/train_x.csv",
+    train_theta, train_x = prep_data("./8d_theta/model_7_1/5d/train_theta.csv",
+                                     "./8d_theta/model_7_1/5d/train_x.csv",
                                      standardization=True,
                                      uncertainty=True)
     train_theta, train_x = train_theta[:199983], train_x[:199983]
@@ -79,6 +79,6 @@ if __name__ == "__main__":
     study = optuna.create_study(direction="maximize")
     study.optimize(objective, n_trials=50)
 
-    save_pickle(study, "./8d_theta/model_7/5d/tune.pkl")
+    save_pickle(study, "./8d_theta/model_7_1/5d/tune.pkl")
 
 
