@@ -69,10 +69,10 @@ def generate_single(theta:list[float],
     - dim: dimension of x
     - uncertainty: to include uncertainty in the inference or not
     """
-    
-    if not uncertainty:
-        x = generate_galaxy_multiple(torch.tensor([theta]), [n_stars], dim, n_jobs=1)
-        return x
+
+    x = generate_galaxy_multiple(torch.tensor([theta]), torch.tensor([n_stars]), dim, uncertainty=uncertainty, n_jobs=1)
+    return x
+        
 
 def compress(file:str, save_path:str):
     """
@@ -97,7 +97,7 @@ def compress(file:str, save_path:str):
     # save
     save_csv(a, save_path)
 
-def dimension_reduction(file:str, save_path:str):
+def dimension_reduction(file:str, save_path:str, type:str):
     """
     Reduce the dimension of stellar kinematics, from 3 dimensional to 2 dimensional,\
         or from 5 dimensional to 3 dimensional
@@ -106,45 +106,52 @@ def dimension_reduction(file:str, save_path:str):
     Params:
     - file: file path to train_theta
     - save_path: where to save compressed file
+    - type: type of file that needs to be compressed, either "x" or "theta" 
     """
     df = load_csv(file, "ndarray")
-    
-    if df.shape[1] == 3:
-        new_array = np.zeros((df.shape[0], 2))
-        new_array[:,0] = np.sqrt(df[:,0] ** 2 + df[:, 1] ** 2)
-        new_array[:,1] = df[:,2]
-    elif df.shape[0] == 5:
-        new_array = df[:, (0, 1, 4)]
+  
+    if type == "x":
+        if df.shape[1] == 3:
+            new_array = np.zeros((df.shape[0], 2))
+            new_array[:,0] = np.sqrt(df[:,0] ** 2 + df[:, 1] ** 2)
+            new_array[:,1] = df[:,2]
+        elif df.shape[1] == 5:
+            new_array = df[:, (0, 1, 4)]
+    elif type == "theta":
+        if df.shape[1] == 11:
+            new_array = df[:, :9]
+            
 
     save_csv(new_array, save_path)
     
 
 if __name__ == "__main__":
-    # Generate Dataset
-    theta, x = generate_data(100,
-                             100,
-                             5,
-                             uncertainty=True,
-                             n_jobs=4)
-    for i in range(99):
-        t, x0 = generate_data(100,
-                             100,
-                             5,
-                             uncertainty=True,
-                             n_jobs=4)
-        theta = torch.cat((theta, t), dim=0)
-        x = torch.cat((x, x0), dim=0)
+    # # Generate Dataset
+    # theta, x = generate_data(100,
+    #                          100,
+    #                          5,
+    #                          uncertainty=True,
+    #                          n_jobs=4)
+    # for i in range(999):
+    #     t, x0 = generate_data(100,
+    #                          100,
+    #                          5,
+    #                          uncertainty=True,
+    #                          n_jobs=4)
+    #     theta = torch.cat((theta, t), dim=0)
+    #     x = torch.cat((x, x0), dim=0)
     
-    save_csv(theta, "./8d_theta/model_7/5d/train_theta.csv", override=False)
-    save_csv(x, "./8d_theta/model_7/5d/train_x.csv", override=False)
+    # save_csv(theta, "./8d_theta/model_8/5d/train_theta.csv", override=False)
+    # save_csv(x, "./8d_theta/model_8/5d/train_x.csv", override=False)
     
     # # Single
-    # x = generate_single([1, 3, 1, 8.0755, 0, -0.6402, 0, 0], 100)
-    # save_csv(x, "./8d_theta/model_4/x_o_cusp.csv", override=True)
+    # x, _ = generate_single([1, 3, 0, 8.0755, 0, -0.6402, 0, 0, 0], 100, 5, uncertainty=True)
+    # print(_)
+    # save_csv(x, "./8d_theta/model_7/5d/mass_density_core.csv", override=True)
     
     # # Compress
     # compress("./8d_theta/model_2/train_theta.csv", "./8d_theta/model_2/train_theta_new.csv")
     
     # Reduce dimension
-    # dimension_reduction("./8d_theta/model_5/train_x.csv", "./8d_theta/model_6/train_x.csv")
+    dimension_reduction("./8d_theta/model_8/5d/train_theta.csv", "./8d_theta/model_8/3d/train_theta.csv", "theta")
     

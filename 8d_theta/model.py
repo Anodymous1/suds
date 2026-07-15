@@ -100,22 +100,24 @@ def train_model(inference:SNLE,
 
 
 if __name__ == "__main__":
-    train_theta, train_x = prep_data("./8d_theta/model_5/train_theta.csv",
-                                     "./8d_theta/model_5/train_x.csv")
+    train_theta, train_x = prep_data("./8d_theta/model_8/3d/train_theta.csv",
+                                     "./8d_theta/model_8/3d/train_x.csv",
+                                     uncertainty=True)
 
 
-    likelihood_estimator_settings = {"model":"maf", 
-                                    "hidden_features": 83,
-                                    "num_transforms": 4,
-                                    "num_bins": 4}
+    likelihood_estimator_settings = {"model":"nsf", 
+                                    "hidden_features": 115,
+                                    "num_transforms": 7,
+                                    "num_bins": 8}
     
     inference = prep_inference(train_theta,
                                train_x,
-                               likelihood_estimator_settings=likelihood_estimator_settings)
+                               likelihood_estimator_settings=likelihood_estimator_settings,
+                               uncertainty=True)
 
     arg = {
             "training_batch_size": 1024,
-            "learning_rate": 5.6027428891404e-05,
+            "learning_rate": 0.0009236253925452351,
             "validation_fraction": 0.1,
             "stop_after_epochs": 20,
             "max_num_epochs": 2 ** 31 - 1,
@@ -130,5 +132,5 @@ if __name__ == "__main__":
     
     inference = train_model(inference, arg)
     
-    save_pickle(inference, "./8d_theta/model_5/inference_v2.pkl")
+    save_pickle(inference, "./8d_theta/model_8/3d/inference.pkl")
 

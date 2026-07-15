@@ -16,6 +16,9 @@
 8d_theta/model_3/train_x.csv
 8d_theta/model_3/inference.pkl
 8d_theta/model_4
+8d_theta/model_8/3d/inference.pkl
+8d_theta/model_8/5d/inference.pkl
 *train_theta*
 *train_x*
+
 sbi-logs

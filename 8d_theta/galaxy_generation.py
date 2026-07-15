@@ -204,9 +204,14 @@ def generate_galaxy_multiple(theta: torch.Tensor,
         out = samples_tor[:,(0,1,3,4,5)]
     
     if uncertainty:
-        # Generate uncertianty
-        dist = torch.distributions.Uniform(log_uncertainty_min, log_uncertainty_max) # Log uniform as jeffrey's prior works out to this
-        log_uncertainties = dist.sample(out[:, 2:].shape) # [:, 2:] because only columns starting from the third one is velocity
+        # if uncertainty is given
+        if theta.shape[1] > 8:
+            log_uncertainties = theta[:,8:]
+        else:
+            # Generate uncertianty
+            dist = torch.distributions.Uniform(log_uncertainty_min, log_uncertainty_max) # Log uniform as jeffrey's prior works out to this
+            log_uncertainties = dist.sample(out[:, 2:].shape) # [:, 2:] because only columns starting from the third one is velocity
+        
         out[:, 2:] = torch.normal(out[:, 2:], 10 ** log_uncertainties) # Sample from Gaussian
         return out, log_uncertainties
     else:
