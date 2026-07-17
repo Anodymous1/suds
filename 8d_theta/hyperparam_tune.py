@@ -48,7 +48,8 @@ def objective(trial):
     
     train_settings = {"learning_rate": learning_rate,
                       "training_batch_size": training_batch_size,
-                      "stop_after_epochs": patience}
+                      "stop_after_epochs": patience,
+                      "max_num_epochs": 100}
     
     inference = train_model(inference,
                             train_settings)
@@ -69,7 +70,7 @@ if __name__ == "__main__":
 
 
     train_theta, train_x = prep_data("./8d_theta/model_7_1/5d/train_theta.csv",
-                                     "./8d_theta/model_7_1/5d/train_x.csv",
+                                     "./8d_theta/model_7_1/3d/train_x.csv",
                                      standardization=True,
                                      uncertainty=True)
     train_theta, train_x = train_theta[:199983], train_x[:199983]
@@ -77,8 +78,8 @@ if __name__ == "__main__":
     # study = load_pickle("./8d_theta/model_1/tune.pkl")
     
     study = optuna.create_study(direction="maximize")
-    study.optimize(objective, n_trials=50)
+    study.optimize(objective, n_trials=40)
 
-    save_pickle(study, "./8d_theta/model_7_1/5d/tune.pkl")
+    save_pickle(study, "./8d_theta/model_7_1/3d/tune.pkl")
 
 

@@ -105,9 +105,9 @@ if __name__ == "__main__":
                                      uncertainty=True)
 
     likelihood_estimator_settings = {"model":"nsf", 
-                                    "hidden_features": 83,
-                                    "num_transforms": 7,
-                                    "num_bins": 10}
+                                    "hidden_features": 117,
+                                    "num_transforms": 12,
+                                    "num_bins":7}
     
     inference = prep_inference(train_theta,
                                train_x,
@@ -116,7 +116,7 @@ if __name__ == "__main__":
 
     arg = {
             "training_batch_size": 1024,
-            "learning_rate": 0.0012900817130185045,
+            "learning_rate": 0.0010435920898518333,
             "validation_fraction": 0.1,
             "stop_after_epochs": 20,
             "max_num_epochs": 2 ** 31 - 1,

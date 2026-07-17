@@ -126,32 +126,35 @@ def dimension_reduction(file:str, save_path:str, type:str):
     
 
 if __name__ == "__main__":
-    # Generate Dataset
-    # theta, x = generate_data(100,
+    # # Generate Dataset
+    # theta, x = generate_data(10,
     #                          100,
     #                          5,
-    #                          uncertainty=True,
+    #                          uncertainty=False,
     #                          n_jobs=4)
-    # for i in range(99):
-    #     t, x0 = generate_data(100,
+    # for i in range(999):
+    #     t, x0 = generate_data(10,
     #                          100,
     #                          5,
-    #                          uncertainty=True,
+    #                          uncertainty=False,
     #                          n_jobs=4)
     #     theta = torch.cat((theta, t), dim=0)
     #     x = torch.cat((x, x0), dim=0)
+
+    # save_csv(theta, "./8d_theta/model_5_2/5d/train_theta.csv", override=False)
+    # save_csv(x, "./8d_theta/model_5_2/5d/train_x.csv", override=False)
     
-    # save_csv(theta, "./8d_theta/model_7_1/5d/train_theta.csv", override=False)
-    # save_csv(x, "./8d_theta/model_7_1/5d/train_x.csv", override=False)
+# ======================================================================================================
+    # Single
+    x, _ = generate_single([1, 3, 0, 8.0755, 0, -0.6402, 0, 0, 0, 0, 0], 100, 5, uncertainty=True)
+    print(_)
+    save_csv(x, "./8d_theta/model_7_1/5d/mass_density_core.csv", override=False)
     
-    # # Single
-    # x, _ = generate_single([1, 3, 0, 8.0755, 0, -0.6402, 0, 0, 0], 100, 5, uncertainty=True)
-    # print(_)
-    # save_csv(x, "./8d_theta/model_7/5d/mass_density_core.csv", override=True)
-    
+# ======================================================================================================
     # # Compress
     # compress("./8d_theta/model_2/train_theta.csv", "./8d_theta/model_2/train_theta_new.csv")
     
+# ======================================================================================================
     # Reduce dimension
-    dimension_reduction("./8d_theta/model_7_1/5d/train_x.csv", "./8d_theta/model_7_1/3d/train_x.csv", "x")
+    # dimension_reduction("./8d_theta/model_5_2/5d/train_x.csv", "./8d_theta/model_5_2/3d/train_x.csv", "x")
     

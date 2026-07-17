@@ -12,9 +12,9 @@ from joblib import Parallel, delayed
 from parameter_bounds import log_uncertainty_min, log_uncertainty_max
 # set agama unit to be in Msun, kpc, km/s
 agama.setUnits(mass=1 * u.Msun, length=1*u.kpc, velocity=1 * u.km /u.s)
-agama.setRandomSeed(13)
-torch.manual_seed(13)
-np.random.seed(13)
+# agama.setRandomSeed(13)
+# torch.manual_seed(13)
+# np.random.seed(13)
 
 def _make_potential(alpha: float, beta: float, gamma: float, p_0: float, r_s: float) -> agama.Potential:
     """
@@ -156,9 +156,10 @@ def _simulate_one_galaxy(theta: torch.Tensor, num_stars: int) -> torch.Tensor:
 
     r_star = theta[5]
     
-    #  filter out v_los > 1000, r > 20 * r_star
+    #  filter out v > 1000, r > 20 * r_star
     def condition(galaxy):
-        return (np.abs(galaxy[:,5]) > 1000) | (np.sqrt(galaxy[:,0] ** 2 + galaxy[:,1] ** 2) > 20 * r_star)
+        x, y, z, vx, vy, vz = galaxy.T
+        return (np.sqrt(vx ** 2 + vy ** 2 + vz ** 2) > 200 * np.sqrt(3)) | (np.sqrt(x ** 2 + y ** 2) > 20 * r_star)
     
     cond = condition(galaxy)
     while np.count_nonzero(cond) != 0:

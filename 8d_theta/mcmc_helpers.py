@@ -3,7 +3,7 @@ import agama
 import torch 
 import numpy as np
 from astropy import units as u
-from sbi.inference import  MCMCPosterior
+from sbi.inference import  MCMCPosterior, SNLE
 from sbi.inference.potentials.likelihood_based_potential import LikelihoodBasedPotential
 from sbi.utils import mcmc_transform
 import torch
@@ -44,11 +44,6 @@ class LikelihoodBasedPotentialWithUncertainty(LikelihoodBasedPotential):
         """
         # Ensure theta is at least 2D
         theta = atleast_2d(theta)
-        # print(theta.shape)
-        # print(self.uncertainties.shape)
-        # # Determine the columns for the parameters vs. uncertainties
-        # col = theta.shape[1] - self.uncertainties.shape[1]
-        # theta_truncated = theta[:, :col]
         
         N = theta.shape[0]  # Number of candidate parameters
         M = self.x_o.shape[0]         # Number of trials
@@ -66,7 +61,7 @@ class LikelihoodBasedPotentialWithUncertainty(LikelihoodBasedPotential):
         # Keeps any extra dimensions if x_o is multidimensional
         x_rep = self.x_o.repeat(N, *([1] * (self.x_o.dim() - 1)))
         
-        # Calculate likelihood over all N * M combinations in one batch
+        # Calculate likelihood over all xaN * M combinations in one batch
         with torch.set_grad_enabled(track_gradients):
             log_prob_batch = self.likelihood_estimator.log_prob(
                 x_rep.to(self.device), 
@@ -131,3 +126,25 @@ class MCMCPosteriorWithUncertainty(MCMCPosterior):
             self.potential_fn.uncertainties = uncertainty
             
         return super().sample(*args, **kwargs)
+    
+class CombinedNLE():
+    """
+    A wrapper that combines the log prob function of two NLE models \
+        where one model takes in 3D stellar kinematics while the other \
+            takes in 5d
+            
+    Attributes:
+        - net3: net that takes 3d stellar kinematics as input (x, y, vz)
+        - net5: net that takes 5d stellar kinematics as input (x, y, vx, vy, vz)
+    """
+    
+    def __init__(self, net3: SNLE, net5: SNLE):
+        self.net3 = net3._neural_net
+        self.net5 = net5._neural_net
+    
+    def log_prob(self, x:torch.Tensor, theta:torch.Tensor):
+        """
+        Return the log likelihood
+        """
+        
+        
