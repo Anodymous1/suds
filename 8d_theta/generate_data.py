@@ -14,7 +14,6 @@ from object_handler import save_csv, load_csv
 
 torch.set_num_threads(1)
 
-
 def generate_data(num_galaxies:int, 
                   num_stars:int, 
                   dim:int,
@@ -38,7 +37,7 @@ def generate_data(num_galaxies:int,
     """
     
     prior = generate_prior()
-    theta = prior.sample((num_galaxies,))
+    galaxies = prior.sample((num_galaxies,))
     
     if poisson:
         rates = torch.full((num_galaxies,), num_stars, dtype=torch.float32)
@@ -46,13 +45,8 @@ def generate_data(num_galaxies:int,
     else:
         n_stars = num_stars
 
-    if not uncertainty:
-        theta = torch.column_stack((theta, n_stars))
-        x = generate_galaxy_multiple(theta, n_stars, dim, n_jobs=n_jobs)
-    else:
-        theta = torch.repeat_interleave(theta, n_stars, dim=0)
-        x, uncertainties = generate_galaxy_multiple(theta, n_stars, dim, uncertainty=True, n_jobs=n_jobs)
-        theta = torch.column_stack((theta, uncertainties))
+
+    theta, x = generate_galaxy_multiple(galaxies, n_stars, dim, uncertainty=uncertainty, n_jobs=n_jobs)
     
     return theta, x
     
@@ -119,36 +113,36 @@ def dimension_reduction(file:str, save_path:str, type:str):
             new_array = df[:, (0, 1, 4)]
     elif type == "theta":
         if df.shape[1] == 11:
-            new_array = df[:, :9]
+            new_array = df[:, (0, 1, 2, 3, 4, 5, 6, 7, 10)]
             
 
     save_csv(new_array, save_path)
     
 
 if __name__ == "__main__":
-    # # Generate Dataset
-    # theta, x = generate_data(10,
-    #                          100,
-    #                          5,
-    #                          uncertainty=False,
-    #                          n_jobs=4)
-    # for i in range(999):
-    #     t, x0 = generate_data(10,
-    #                          100,
-    #                          5,
-    #                          uncertainty=False,
-    #                          n_jobs=4)
-    #     theta = torch.cat((theta, t), dim=0)
-    #     x = torch.cat((x, x0), dim=0)
+    # Generate Dataset
+    theta, x = generate_data(100,
+                             100,
+                             5,
+                             uncertainty=True,
+                             n_jobs=4)
+    for i in range(99):
+        t, x0 = generate_data(100,
+                             100,
+                             5,
+                             uncertainty=True,
+                             n_jobs=4)
+        theta = torch.cat((theta, t), dim=0)
+        x = torch.cat((x, x0), dim=0)
 
-    # save_csv(theta, "./8d_theta/model_5_2/5d/train_theta.csv", override=False)
-    # save_csv(x, "./8d_theta/model_5_2/5d/train_x.csv", override=False)
+    save_csv(theta, "./8d_theta/model_7_1/5d/train_theta.csv", override=False)
+    save_csv(x, "./8d_theta/model_7_1/5d/train_x.csv", override=False)
     
 # ======================================================================================================
     # Single
-    x, _ = generate_single([1, 3, 0, 8.0755, 0, -0.6402, 0, 0, 0, 0, 0], 100, 5, uncertainty=True)
-    print(_)
-    save_csv(x, "./8d_theta/model_7_1/5d/mass_density_core.csv", override=False)
+    # t, x = generate_single([1, 3, 0, 8.0755, 0, -0.6402, 0, 0], 100, 5, uncertainty=False)
+    # print(t)
+    # save_csv(x, "./8d_theta/model_5_2/5d/mass_density_core.csv", override=False)
     
 # ======================================================================================================
     # # Compress
@@ -156,5 +150,6 @@ if __name__ == "__main__":
     
 # ======================================================================================================
     # Reduce dimension
-    # dimension_reduction("./8d_theta/model_5_2/5d/train_x.csv", "./8d_theta/model_5_2/3d/train_x.csv", "x")
+    dimension_reduction("./8d_theta/model_7_1/5d/train_x.csv", "./8d_theta/model_7_1/3d/train_x.csv", "x")
+    dimension_reduction("./8d_theta/model_7_1/5d/train_theta.csv", "./8d_theta/model_7_1/3d/train_theta.csv", "theta")
     

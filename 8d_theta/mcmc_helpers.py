@@ -144,7 +144,12 @@ class CombinedNLE():
     
     def log_prob(self, x:torch.Tensor, theta:torch.Tensor):
         """
-        Return the log likelihood
+        Return the combined log likelihood
         """
         
+        mask = x[:, 3].isnan() & x[:, 4].isnan()
+        three_d_x, five_d_x = x[mask], x[~mask]
+        three_d_theta, five_d_theta = theta[mask], theta[~mask]
+        
+        return self.net3(three_d_x, three_d_theta) + self.net5(five_d_x, five_d_theta)
         

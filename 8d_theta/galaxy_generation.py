@@ -12,9 +12,9 @@ from joblib import Parallel, delayed
 from parameter_bounds import log_uncertainty_min, log_uncertainty_max
 # set agama unit to be in Msun, kpc, km/s
 agama.setUnits(mass=1 * u.Msun, length=1*u.kpc, velocity=1 * u.km /u.s)
-# agama.setRandomSeed(13)
-# torch.manual_seed(13)
-# np.random.seed(13)
+agama.setRandomSeed(37)
+torch.manual_seed(37)
+np.random.seed(37)
 
 def _make_potential(alpha: float, beta: float, gamma: float, p_0: float, r_s: float) -> agama.Potential:
     """
@@ -123,6 +123,7 @@ def _sample_galaxy(model, num_stars: int) -> np.ndarray:
     
     """
     
+    # Generate in sets of 100 to prevent agama from crashing
     star_list = []
     remainder = num_stars % 100
     chunks = num_stars // 100
@@ -150,24 +151,28 @@ def _simulate_one_galaxy(theta: torch.Tensor, num_stars: int) -> torch.Tensor:
     - num_stars: number of stars in the galaxy
     
     """
-    theta = theta.tolist()
-    model = _generate_galaxy(*theta)
-    galaxy = _sample_galaxy(model, num_stars)
 
-    r_star = theta[5]
+    theta_list = theta.tolist()
+    try:
+        # Wrap the AGAMA model generation in a try-except to catch unphysical parameters
+        model = _generate_galaxy(*theta_list)
+        galaxy = _sample_galaxy(model, num_stars)
+    except RuntimeError as e:
+        # Handle cases where AGAMA fails due to NaNs or infinite coordinates
+        print(f"Skipping unphysical parameters {theta_list} due to AGAMA error: {e}")
+        return torch.empty((0, 6)).float(), 0
     
+
+    r_star = theta_list[5]
     #  filter out v > 1000, r > 20 * r_star
     def condition(galaxy):
         x, y, z, vx, vy, vz = galaxy.T
-        return (np.sqrt(vx ** 2 + vy ** 2 + vz ** 2) > 200 * np.sqrt(3)) | (np.sqrt(x ** 2 + y ** 2) > 20 * r_star)
+        return ~((np.sqrt(vx ** 2 + vy ** 2 + vz ** 2) > 200 * np.sqrt(3)) | (np.sqrt(x ** 2 + y ** 2) > 20 * r_star))
     
     cond = condition(galaxy)
-    while np.count_nonzero(cond) != 0:
-        new_star = _sample_galaxy(model, np.count_nonzero(cond))
-        galaxy[cond] = new_star
-        cond = condition(galaxy)
-
-    return torch.tensor(galaxy).float()
+    new_galaxy = galaxy[cond]
+    
+    return torch.tensor(new_galaxy).float(), len(new_galaxy)
 
 
 
@@ -179,7 +184,7 @@ def generate_galaxy_multiple(theta: torch.Tensor,
     """
     Generate the galaxy model with multiple stars given theta 
 
-    returns a matrix of stars for each theta
+    returns a matrix of stars for each theta as well as formatted theta 
 
     - theta: tensor of sampled theta with columns \
         alpha, beta, gamma, log(p_0), log(r_s), log(r_star/r_s), log(r_a / r_star), beta_0 \
@@ -189,34 +194,55 @@ def generate_galaxy_multiple(theta: torch.Tensor,
     - uncertainty: to include uncertainty in the inference or not
     - n_jobs: the number of threads to use to use in the generation process
     """
+    
+    # Transform the theta into real values to be used to generate the galxy
     transformed_theta = transform_params(theta)
     
-    results = Parallel(n_jobs=n_jobs)(
+    # Sample the stars
+    results_with_length = Parallel(n_jobs=n_jobs)(
     delayed(_simulate_one_galaxy)(row, n) 
     for row, n in zip(transformed_theta, n_stars.tolist())
     )
     
+    # Unpack results
+    results = [r[0] for r in results_with_length]
     samples_tor = torch.cat(results, dim=0)
+    lengths = torch.tensor([r[1] for r in results_with_length])
     
+    # Get desired columns
     if dim == 3:
-        out = samples_tor[:,(0, 1, 5)]
+        x = samples_tor[:,(0, 1, 5)]
     elif dim == 2:
-        out = torch.zeros((samples_tor.shape[0],2))
-        out[:,0] = torch.sqrt(samples_tor[:, 0] ** 2  + samples_tor[:, 1] ** 2)
-        out[:,1] = samples_tor[:, 5]
+        x = torch.zeros((samples_tor.shape[0],2))
+        x[:,0] = torch.sqrt(samples_tor[:, 0] ** 2  + samples_tor[:, 1] ** 2)
+        x[:,1] = samples_tor[:, 5]
     elif dim == 5:
-        out = samples_tor[:,(0,1,3,4,5)]
+        x = samples_tor[:,(0,1,3,4,5)]
+    
     
     if uncertainty:
         # if uncertainty is given
         if theta.shape[1] > 8:
-            log_uncertainties = theta[:,8:]
+
+            log_uncertainties = theta[:,8:].repeat(lengths, 1)
         else:
             # Generate uncertianty
             dist = torch.distributions.Uniform(log_uncertainty_min, log_uncertainty_max) # Log uniform as jeffrey's prior works out to this
-            log_uncertainties = dist.sample(out[:, 2:].shape) # [:, 2:] because only columns starting from the third one is velocity
+            log_uncertainties = dist.sample(x[:, 2:].shape) # [:, 2:] because only columns starting from the third one is velocity
         
-        out[:, 2:] = torch.normal(out[:, 2:], 10 ** log_uncertainties) # Sample from Gaussian
-        return out, log_uncertainties
+        x[:, 2:] = torch.normal(x[:, 2:], 10 ** log_uncertainties) # Sample from Gaussian
+        
+        # format theta
+        new_theta = torch.repeat_interleave(theta, lengths, dim=0)
+        new_theta_with_unc = torch.column_stack((new_theta, log_uncertainties))
+                
+        return new_theta_with_unc, x
+    
     else:
-        return out
+        # Add lengths to theta (compressing)
+        new_theta = torch.column_stack((theta, lengths))
+        
+        # Filter out galaxies with 0 stars
+        mask = new_theta[:, -1] > 0.0
+        
+        return new_theta[mask], x

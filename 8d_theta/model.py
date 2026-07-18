@@ -104,10 +104,10 @@ if __name__ == "__main__":
                                      "./8d_theta/model_7_1/5d/train_x.csv",
                                      uncertainty=True)
 
-    likelihood_estimator_settings = {"model":"nsf", 
-                                    "hidden_features": 117,
-                                    "num_transforms": 12,
-                                    "num_bins":7}
+    likelihood_estimator_settings = {"model":"maf", 
+                                    "hidden_features": 70,
+                                    "num_transforms": 8,
+                                    "num_bins":9}
     
     inference = prep_inference(train_theta,
                                train_x,
@@ -116,7 +116,7 @@ if __name__ == "__main__":
 
     arg = {
             "training_batch_size": 1024,
-            "learning_rate": 0.0010435920898518333,
+            "learning_rate": 0.0010867435048857923,
             "validation_fraction": 0.1,
             "stop_after_epochs": 20,
             "max_num_epochs": 2 ** 31 - 1,
@@ -131,5 +131,5 @@ if __name__ == "__main__":
     
     inference = train_model(inference, arg)
     
-    save_pickle(inference, "./8d_theta/model_7_1/5d/inference.pkl")
+    save_pickle(inference, "./8d_theta/model_7_1/5d/inference_real.pkl")
 
