@@ -126,7 +126,7 @@ if __name__ == "__main__":
                              5,
                              uncertainty=True,
                              n_jobs=4)
-    for i in range(99):
+    for i in range(999):
         t, x0 = generate_data(100,
                              100,
                              5,

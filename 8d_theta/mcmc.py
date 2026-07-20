@@ -221,21 +221,21 @@ if __name__ == "__main__":
                                         
                                         
     # Example code for mass density
-    prof = "cusp"
+    prof = "core"
     
     print(prof)
-    test_x = prep_data(f"./8d_theta/model_7_1/5d/mass_density_{prof}.csv",
-                       train_x= "./8d_theta/model_7_1/5d/train_x.csv",)
+    test_x = prep_data(f"./8d_theta/model_7_1/3d/mass_density_{prof}.csv",
+                       train_x= "./8d_theta/model_7_1/3d/train_x.csv",)
     
-    posterior = prep_posterior(f"./8d_theta/model_7_1/5d/inference.pkl",
+    posterior = prep_posterior(f"./8d_theta/model_7_1/3d/inference.pkl",
                                mcmc_settings,
                                uncertainty=True)
         
     final_samples = run_mcmc(test_x, posterior, 1, 
-                             uncertainties=[torch.zeros((100,3))])
+                             uncertainties=[torch.zeros((100,1))])
     
     save_samples(final_samples,
-                 f"8d_theta/model_7_1/5d/mass_density_samples_{prof}.csv")
+                 f"8d_theta/model_7_1/3d/mass_density_samples_{prof}.csv")
 # ======================================================================================================
 
     # # MCMC settings - No Uncertainties
