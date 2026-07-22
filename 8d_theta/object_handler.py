@@ -5,7 +5,8 @@ import pickle
 import pandas as pd
 from numpy import ndarray, array
 from torch import Tensor, tensor
-
+import h5py
+import gc
 
 def _is_overwrite(file_path:str):
     """
@@ -44,7 +45,27 @@ def save_pickle(obj:Any, file_path:str, override:bool = False) -> None:
     if not _is_overwrite(file_path) or override:
         with open(file_path, "wb") as handle:
             pickle.dump(obj, handle)
+            
+def save_h5(obj:Any, file_path:str, dataset_name:str, override:bool = False) -> None:
+    """
+    Saves a .hdf5 file using pickle
+    
+    params:
+    - obj: the object
+    - file_path: save to file path
+    - dataset_name: name of dataset
+    - override: True if overide the overwrite protection
+    """
+    
+    if not _is_overwrite(file_path) or override:
+        with h5py.File(file_path, "w") as f:
+            f.create_dataset(dataset_name, 
+                             data=obj, 
+                             dtype="f4",
+                             compression="gzip", 
+                             compression_opts=4)
 
+    
 def load_pickle(file_path:str) -> Any:
     """
     Load a .pkl file
@@ -73,6 +94,29 @@ def load_csv(file_path:str, type:str) -> ndarray|Tensor:
     elif type == "Tensor":
         df = tensor(df.values).float()
         
+    return df
+   
+def load_h5(file_path:str, dataset_name:str, type:str) -> ndarray|Tensor:
+    """
+    Loads a h5 file as a numpy array or torch tensor
+    
+    params:
+    - file_path: file directory
+    - dataset_name: name of dataset that wants to be retrieved
+    - type: output type
+    
+    Preconditions:
+    - type in ["ndarray", "Tensor"]
+    """
+    with h5py.File(file_path, "r") as f:
+        df = f[dataset_name][:]
+        
+    if type == "ndarray":
+        df = array(df)
+    if type == "Tensor":
+        df = tensor(df).float()
+        
+    
     return df
         
 def load_galaxies(file_path:str, type:str) -> ndarray|Tensor:

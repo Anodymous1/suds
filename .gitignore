@@ -20,5 +20,6 @@
 8d_theta/model_8/5d/inference.pkl
 *train_theta*
 *train_x*
+*inference*
 
 sbi-logs

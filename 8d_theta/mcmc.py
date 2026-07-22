@@ -17,7 +17,7 @@ from sbi.analysis import conditional_potential
 from sbi.utils import mcmc_transform
 import time
 from standardization import standardize
-from object_handler import save_pickle, save_csv, load_csv, load_galaxies, load_pickle
+from object_handler import save_pickle, save_csv, load_csv, load_galaxies, load_pickle, load_h5
 from joblib import Parallel, delayed
 from prior_generation import generate_prior
 from mcmc_helpers import likelihood_estimator_based_potential_with_uncertainty, MCMCPosteriorWithUncertainty
@@ -45,11 +45,11 @@ def prep_data(test_x: str,
     - uncertainty: whether to include uncertainty in our inference or not. Only relevant for multiple galaxies
     """
     
-    test_x_raw = load_csv(test_x, "Tensor")
+    test_x_raw = load_h5(test_x, "x", "Tensor") if ".h5" in test_x else load_csv(test_x, "Tensor")
     
     # standardization
     if train_x is not None:
-        train_x = load_csv(train_x, "Tensor")
+        train_x = load_h5(train_x, "x", "Tensor") if ".h5" in train_x else load_csv(train_x, "Tensor")
         x = standardize(train_x)
         test_x_raw = (test_x_raw - x[1])/ x[2]
     
@@ -221,23 +221,50 @@ if __name__ == "__main__":
                                         
                                         
     # Example code for mass density
-    prof = "core"
+    prof = "cusp"
     
     print(prof)
-    test_x = prep_data(f"./8d_theta/model_7_1/3d/mass_density_{prof}.csv",
-                       train_x= "./8d_theta/model_7_1/3d/train_x.csv",)
+    test_x = prep_data(f"./8d_theta/model_7_1/5d/mass_density_{prof}.csv",
+                       train_x= "./8d_theta/model_8/5d/train_x.h5",)
     
-    posterior = prep_posterior(f"./8d_theta/model_7_1/3d/inference.pkl",
+    posterior = prep_posterior(f"./8d_theta/model_8/5d/inference.pkl",
                                mcmc_settings,
                                uncertainty=True)
         
     final_samples = run_mcmc(test_x, posterior, 1, 
-                             uncertainties=[torch.zeros((100,1))])
+                             uncertainties=[torch.zeros((100,3))])
     
     save_samples(final_samples,
-                 f"8d_theta/model_7_1/3d/mass_density_samples_{prof}.csv")
+                 f"8d_theta/model_8/5d/mass_density_samples_{prof}.csv")
 # ======================================================================================================
-
+    # # MCMC settings - P(v| x, y, sigma, theta)
+    # mcmc_settings = {"mcmc_method":"slice_np_vectorized", 
+    #                  "mcmc_parameters":{"warmup_steps":500,
+    #                                 "num_chains":16,
+    #                                 "num_workers": 1,
+    #                                 "init_strategy": "sir",
+    #                                 "thin": 1}}
+                                        
+                                        
+    # # Example code for mass density
+    # prof = "core"
+    # dim = 3
+    # print(prof)
+    # test_x = prep_data(f"./8d_theta/model_7_1/{dim}d/mass_density_{prof}.csv",
+    #                    train_x= f"./8d_theta/model_8/{dim}d/train_x.csv",)
+    # position, test_x = test_x[:, :2], test_x[:, 2:]
+    
+    # posterior = prep_posterior(f"./8d_theta/model_9/{dim}d/inference.pkl",
+    #                            mcmc_settings,
+    #                            uncertainty=True)
+        
+    # final_samples = run_mcmc(test_x, posterior, 1, 
+    #                          uncertainties=[torch.column_stack((torch.zeros((100,1)), position))])
+    
+    # save_samples(final_samples,
+    #              f"8d_theta/model_9/{dim}d/mass_density_samples_{prof}.csv")
+    
+# ======================================================================================================
     # # MCMC settings - No Uncertainties
     # mcmc_settings = {"mcmc_method":"slice_np_vectorized", 
     #                  "mcmc_parameters":{"warmup_steps":500,

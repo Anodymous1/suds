@@ -68,18 +68,26 @@ if __name__ == "__main__":
     torch.manual_seed(13)
     np.random.seed(13)
 
+    dim = 5
 
-    train_theta, train_x = prep_data("./8d_theta/model_7_1/3d/train_theta.csv",
-                                     "./8d_theta/model_7_1/3d/train_x.csv",
+    print(dim)    
+    train_theta, train_x = prep_data(f"./8d_theta/model_8/{dim}d/train_theta.h5",
+                                     f"./8d_theta/model_8/{dim}d/train_x.h5",
                                      standardization=True,
                                      uncertainty=True)
-    train_theta, train_x = train_theta[:199983], train_x[:199983]
+    
+    train_theta, train_x = train_theta[:200000], train_x[:200000]
+    
+    ### For P(v| x, y, sigma, theta) ###
+    train_theta = torch.column_stack((train_theta, train_x[:, :2]))
+    train_x = train_x[:, 2:]
+    #######################################
 
     # study = load_pickle("./8d_theta/model_1/tune.pkl")
     
     study = optuna.create_study(direction="maximize")
     study.optimize(objective, n_trials=50)
 
-    save_pickle(study, "./8d_theta/model_7_1/3d/tune.pkl")
+    save_pickle(study, f"./8d_theta/model_9/{dim}d/tune.pkl")
 
 
