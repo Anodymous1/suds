@@ -119,12 +119,12 @@ def dimension_reduction(df: np.ndarray, type:str):
     
 
 if __name__ == "__main__":
-    # # Generate Dataset
-    # theta, x = generate_data(100,
-    #                          100,
-    #                          5,
-    #                          uncertainty=True,
-    #                          n_jobs=4)
+    # Generate Dataset
+    theta, x = generate_data(2000,
+                             100,
+                             5,
+                             uncertainty=True,
+                             n_jobs=4)
     # for i in range(4999):
     #     t, x0 = generate_data(100,
     #                          100,
@@ -134,8 +134,8 @@ if __name__ == "__main__":
     #     theta = torch.cat((theta, t), dim=0)
     #     x = torch.cat((x, x0), dim=0)
 
-    # save_h5(theta, "./8d_theta/model_8/5d/train_theta.h5", "theta", override=False)
-    # save_h5(x, "./8d_theta/model_8/5d/train_x.h5", "x", override=False)
+    save_h5(theta, "./8d_theta/model_8/5d/test_theta.h5", "theta", override=False)
+    save_h5(x, "./8d_theta/model_8/5d/test_x.h5", "x", override=False)
     
 # ======================================================================================================
     # Single
@@ -152,10 +152,10 @@ if __name__ == "__main__":
     # dimension_reduction("./8d_theta/model_7_1/5d/train_x.csv", "./8d_theta/model_7_1/3d/train_x.csv", "x")
     # dimension_reduction("./8d_theta/model_7_1/5d/train_theta.csv", "./8d_theta/model_7_1/3d/train_theta.csv", "theta")
     
-    a = load_h5("./8d_theta/model_8/5d/train_x.h5", "x", "ndarray")
+    a = load_h5("./8d_theta/model_8/5d/test_x.h5", "x", "ndarray")
     b = dimension_reduction(a, "x")
-    save_h5(b, "./8d_theta/model_8/3d/train_x.h5", "x")
+    save_h5(b, "./8d_theta/model_8/3d/test_x.h5", "x")
     
-    a = load_h5("./8d_theta/model_8/5d/train_theta.h5", "theta", "ndarray")
+    a = load_h5("./8d_theta/model_8/5d/test_theta.h5", "theta", "ndarray")
     b = dimension_reduction(a, "theta")
-    save_h5(b, "./8d_theta/model_8/3d/train_theta.h5", "theta")
+    save_h5(b, "./8d_theta/model_8/3d/test_theta.h5", "theta")

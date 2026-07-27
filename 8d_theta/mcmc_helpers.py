@@ -127,7 +127,7 @@ class MCMCPosteriorWithUncertainty(MCMCPosterior):
             
         return super().sample(*args, **kwargs)
     
-class CombinedNLE():
+class CombinedLikelihoodEstimator():
     """
     A wrapper that combines the log prob function of two NLE models \
         where one model takes in 3D stellar kinematics while the other \
@@ -151,5 +151,5 @@ class CombinedNLE():
         three_d_x, five_d_x = x[mask], x[~mask]
         three_d_theta, five_d_theta = theta[mask], theta[~mask]
         
-        return self.net3(three_d_x, three_d_theta) + self.net5(five_d_x, five_d_theta)
+        return self.net3.log_prob(three_d_x, three_d_theta) + self.net5.log_prob(five_d_x, five_d_theta)
         

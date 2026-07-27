@@ -21,5 +21,6 @@
 *train_theta*
 *train_x*
 *inference*
-
+dsph_analysis
+mock_data
 sbi-logs

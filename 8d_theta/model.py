@@ -32,7 +32,8 @@ np.random.seed(13)
 def prep_data(train_theta:str,
               train_x:str,
               standardization: bool = True,
-              uncertainty:bool = False) -> tuple[torch.Tensor]:
+              uncertainty:bool = False,
+              dim=5) -> tuple[torch.Tensor]:
     """
     Prepare the data for training
     
@@ -41,21 +42,32 @@ def prep_data(train_theta:str,
     - train_x: file path to training x
     - standardization: if standardization is needed
     - uncertainty: to include uncertainty in the inference or not; use to determine file format
+    - dim: dimension of stellar kinematics
     """
 
-    if not uncertainty:
-        theta, k = load_galaxies(train_theta, "Tensor")
-        train_theta = torch.repeat_interleave(theta, k, dim=0)
-    else:
-        # train_theta = load_csv(train_theta, "Tensor")
-        train_theta = load_h5(train_theta, "theta", "Tensor") if ".h5" in train_theta else load_csv(train_theta, "Tensor")
+    # Load x and theta (5d)
     
-    # train_x_raw = load_csv(train_x, "Tensor")
+    if not uncertainty:
+        # If no uncertainty in inference
+        theta, k = load_galaxies(train_theta, "Tensor")
+        prepped_theta = torch.repeat_interleave(theta, k, dim=0)
+    else:
+        # If uncertainty in inference
+        prepped_theta = load_h5(train_theta, "theta", "Tensor") if ".h5" in train_theta else load_csv(train_theta, "Tensor")
+    
     train_x_raw = load_h5(train_x, "x", "Tensor") if ".h5" in train_x else load_csv(train_x, "Tensor")
 
-    train_x = standardize(train_x_raw)[0] if standardization else train_x_raw
-    
-    return train_theta, train_x
+    # Reduce to the desired dimension
+    if dim == 4:
+        train_x_raw = train_x_raw[:, :4]
+        prepped_theta = prepped_theta[:, :10] if uncertainty else prepped_theta
+    elif dim == 3:
+        train_x_raw = train_x_raw[:, (0, 1, 4)]
+        prepped_theta = prepped_theta[:, (0, 1, 2, 3, 4, 5, 6, 7, 10)] if uncertainty else prepped_theta
+
+    # Standardize the x
+    prepped_x = standardize(train_x_raw)[0] if standardization else train_x_raw    
+    return prepped_theta, prepped_x
 
 
 def prep_inference(train_theta: torch.Tensor,
@@ -110,16 +122,17 @@ def train_model(inference:SNLE,
 if __name__ == "__main__":
     train_theta, train_x = prep_data("./8d_theta/model_8/5d/train_theta.h5",
                                      "./8d_theta/model_8/5d/train_x.h5",
-                                     uncertainty=True)
+                                     uncertainty=True,
+                                     dim=4)
 
-    ### For P(v| x, y, sigma, theta) ###
-    train_theta = torch.column_stack((train_theta, train_x[:, :2]))
-    train_x = train_x[:, 2:]
+    # ### For P(v| x, y, sigma, theta) ###
+    # train_theta = torch.column_stack((train_theta, train_x[:, :2]))
+    # train_x = train_x[:, 2:]
 
     likelihood_estimator_settings = {'model': 'maf',
-                                    'hidden_features': 75,
-                                    'num_transforms': 9,
-                                    'num_bins': 11}
+                                    'hidden_features': 34,
+                                    'num_transforms': 10,
+                                    'num_bins': 4}
     
     inference = prep_inference(train_theta,
                                train_x,
@@ -128,7 +141,7 @@ if __name__ == "__main__":
 
     arg = {
             "training_batch_size": 4096,
-            "learning_rate": 0.00027967246181336485,
+            "learning_rate": 0.005857057586417577,
             "validation_fraction": 0.1,
             "stop_after_epochs": 20,
             "max_num_epochs": 100,
@@ -144,5 +157,5 @@ if __name__ == "__main__":
     
     inference = train_model(inference, arg)
     
-    save_pickle(inference, "./8d_theta/model_9/5d/inference.pkl")
+    save_pickle(inference, "./8d_theta/model_8/4d/inference.pkl")
 
