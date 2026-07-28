@@ -136,7 +136,7 @@ def prep_posterior(model:str|list[str],
             likelihood_estimator = CombinedLikelihoodEstimator(*model)
         
         
-        prior = generate_prior(uncertainty= False)
+        prior = generate_prior(uncertainty= False, realistic_gamma=True)
         
         potential_fn, parameter_transform = likelihood_estimator_based_potential_with_uncertainty(
         likelihood_estimator, prior, x_o=None, uncertainties=None
@@ -257,25 +257,25 @@ if __name__ == "__main__":
                                         
                                         
     # Example code for mass density
-    prof = "core"
-    # mock = "D"
+    # prof = "core"
+    mock = "D"
     
     # print(mock)
-    test_x = prep_data(f"./8d_theta/model_7_1/5d/mass_density_{prof}.csv",
+    test_x = prep_data(f"./8d_theta/model_8/mock/data/Mock{mock}_refined.csv",
                        train_x= "./8d_theta/model_8/5d/train_x.h5",
-                       dim=4)
+                       dim=3)
     
-    posterior = prep_posterior(f"./8d_theta/model_8/4d/inference.pkl",
+    posterior = prep_posterior(f"./8d_theta/model_9/3d/inference.pkl",
                                mcmc_settings,
                                uncertainty=True)
     
-    # uncertainty = load_csv(f"./8d_theta/model_8/mock/data/Mock{mock}_unc.csv", "Tensor")
-    uncertainty = torch.zeros((100,2))
+    uncertainty = load_csv(f"./8d_theta/model_8/mock/data/Mock{mock}_unc.csv", "Tensor")
+    # uncertainty = torch.zeros((100,2))
     final_samples = run_mcmc(test_x, posterior, 1, 
                              uncertainties=[uncertainty])
     
     save_samples(final_samples,
-                 f"8d_theta/model_8/4d/mass_density_samples_{prof}.csv")
+                 f"8d_theta/model_9/mock/rg/Mock{mock}_samples_rg.csv")
     
 # ======================================================================================================
     # # # MCMC settings - P(v| x, y, sigma, theta)
