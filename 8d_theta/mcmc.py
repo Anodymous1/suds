@@ -136,7 +136,7 @@ def prep_posterior(model:str|list[str],
             likelihood_estimator = CombinedLikelihoodEstimator(*model)
         
         
-        prior = generate_prior(uncertainty= False, realistic_gamma=True)
+        prior = generate_prior(uncertainty= False, realistic_gamma=False)
         
         potential_fn, parameter_transform = likelihood_estimator_based_potential_with_uncertainty(
         likelihood_estimator, prior, x_o=None, uncertainties=None
@@ -178,9 +178,9 @@ def sample_single_galaxy(i,
     
     with torch.no_grad():
         if uncertainty is not None:
-            samples = posterior.sample((3200,), x=x_o, uncertainty=uncertainty, show_progress_bars=True).numpy()
+            samples = posterior.sample((6400,), x=x_o, uncertainty=uncertainty, show_progress_bars=True).numpy()
         else:
-            samples = posterior.sample((3200,), x=x_o, show_progress_bars=True).numpy()
+            samples = posterior.sample((6400,), x=x_o, show_progress_bars=True).numpy()
             
 
     
@@ -250,32 +250,32 @@ if __name__ == "__main__":
     # MCMC settings - With Uncertainties
     mcmc_settings = {"mcmc_method":"slice_np_vectorized", 
                      "mcmc_parameters":{"warmup_steps":500,
-                                    "num_chains":16,
+                                    "num_chains": 32,
                                     "num_workers": 1,
                                     "init_strategy": "sir",
                                     "thin": 1}}
                                         
                                         
     # Example code for mass density
-    # prof = "core"
-    mock = "D"
+    prof = "cusp"
+    # mock = "D"
     
     # print(mock)
-    test_x = prep_data(f"./8d_theta/model_8/mock/data/Mock{mock}_refined.csv",
+    test_x = prep_data(f"./8d_theta/model_7_1/3d/mass_density_{prof}.csv",
                        train_x= "./8d_theta/model_8/5d/train_x.h5",
-                       dim=3)
+                       dim=3,)
     
-    posterior = prep_posterior(f"./8d_theta/model_9/3d/inference.pkl",
+    posterior = prep_posterior(f"./8d_theta/model_8/3d/inference.pkl",
                                mcmc_settings,
                                uncertainty=True)
     
-    uncertainty = load_csv(f"./8d_theta/model_8/mock/data/Mock{mock}_unc.csv", "Tensor")
-    # uncertainty = torch.zeros((100,2))
+    # uncertainty = load_csv(f"./8d_theta/model_8/mock/data/Mock{mock}_unc.csv", "Tensor")
+    uncertainty = torch.full((100,1), 1)
     final_samples = run_mcmc(test_x, posterior, 1, 
-                             uncertainties=[uncertainty])
+                             uncertainties=[torch.log10(uncertainty)])
     
     save_samples(final_samples,
-                 f"8d_theta/model_9/mock/rg/Mock{mock}_samples_rg.csv")
+                 f"8d_theta/model_8/3d/mass_density_samples_{prof}_6400_t.csv")
     
 # ======================================================================================================
     # # # MCMC settings - P(v| x, y, sigma, theta)
@@ -288,26 +288,27 @@ if __name__ == "__main__":
                                         
                                         
     # # Example code for mass density
-    # prof = "cusp"
-    # dim = 4
-    # print(prof)
-    # test_x, position = prep_data(f"./8d_theta/model_7_1/3d/mass_density_{prof}.csv",
+    # # prof = "cusp"
+    # mock = "A"
+    # dim = 3
+    # print(mock)
+    # test_x, position = prep_data(f"./8d_theta/model_8/mock/data/Mock{mock}_refined.csv",
     #                    train_x= f"./8d_theta/model_8/5d/train_x.h5",
     #                    uncertainty=True,
     #                    selection=True,
     #                    dim=dim)
-    # # print(len(test_x))
-    # # position, test_x = test_x[0][:, :2], [test_x[0][:, 2:]]
+
+    # uncertainty = load_csv(f"./8d_theta/model_8/mock/data/Mock{mock}_unc.csv", "Tensor")
     
     # posterior = prep_posterior(f"./8d_theta/model_9/{dim}d/inference.pkl",
     #                            mcmc_settings,
     #                            uncertainty=True)
         
     # final_samples = run_mcmc(test_x, posterior, 1, 
-    #                          uncertainties=[torch.column_stack((torch.zeros((100,2)), position))])
+    #                          uncertainties=[torch.column_stack((uncertainty, position))])
     
     # save_samples(final_samples,
-    #              f"8d_theta/model_9/{dim}d/mass_density_samples_{prof}.csv")
+    #              f"8d_theta/model_9/{dim}d/mock/Mock{mock}_samples.csv")
     
 # ======================================================================================================
     # # MCMC settings - No Uncertainties

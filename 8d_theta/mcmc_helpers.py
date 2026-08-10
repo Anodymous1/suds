@@ -26,10 +26,12 @@ class LikelihoodBasedPotentialWithUncertainty(LikelihoodBasedPotential):
         self,
         *args,
         uncertainties: Tensor = None,
+        add_prior: bool = True,
         **kwargs
     ):
         super().__init__(*args, **kwargs)
         self.uncertainties = uncertainties
+        self.add_prior = add_prior
     
     def __call__(self, theta: Tensor, track_gradients: bool = True) -> Tensor:
         r"""Returns the potential $\log(p(x_o|\theta)p(\theta))$.
@@ -75,7 +77,7 @@ class LikelihoodBasedPotentialWithUncertainty(LikelihoodBasedPotential):
         log_prior = self.prior.log_prob(theta)
         
         # Return as a scalar if an unbatched parameter was originally passed
-        total_potential = log_likelihood_trial_sum + log_prior
+        total_potential = log_likelihood_trial_sum + log_prior if self.add_prior else log_likelihood_trial_sum
         return total_potential.squeeze() if total_potential.numel() == 1 else total_potential
     
 def likelihood_estimator_based_potential_with_uncertainty(
