@@ -22,11 +22,29 @@ from object_handler import save_pickle, save_csv, load_csv, load_galaxies, load_
 from joblib import Parallel, delayed
 from prior_generation import generate_prior
 from mcmc_helpers import likelihood_estimator_based_potential_with_uncertainty, MCMCPosteriorWithUncertainty, CombinedLikelihoodEstimator, LikelihoodBasedPotentialWithUncertainty
-from mcmc import prep_data
+from mcmc import prep_data, save_samples
 import parameter_bounds as p
 from scipy.stats import uniform, norm
 from mcmc_helpers import LikelihoodBasedPotentialWithUncertainty
 
+
+# ================================================================================================================
+import pocomc.tools
+import pocomc.geometry
+def patched_systematic_resample(n, weights):
+    positions = (np.random.rand() + np.arange(n)) / n
+    indices = np.zeros(n, dtype=int)
+    cumulative_sum = weights[0]
+    j = 0
+    for i in range(n):
+        # Added "and j < len(weights) - 1" safety guard to prevent j from exceeding bounds
+        while positions[i] > cumulative_sum and j < len(weights) - 1:
+            j += 1
+            cumulative_sum += weights[j]
+        indices[i] = j
+    return indices
+
+# ================================================================================================================
 
 # set agama unit to be in Msun, kpc, km/s
 agama.setUnits(mass=1 * u.Msun, length=1*u.kpc, velocity=1 * u.km /u.s)
@@ -120,7 +138,7 @@ class RStarPrior():
 
 
 def create_potential(likelihood_estimator, prior, test_x, uncertainty):
-    pot = LikelihoodBasedPotentialWithUncertainty(likelihood_estimator, prior, test_x[0], uncertainties=uncertainty, add_prior=False)
+    pot = LikelihoodBasedPotentialWithUncertainty(likelihood_estimator, prior, test_x, uncertainties=uncertainty, add_prior=False)
     
     return pot
 
@@ -143,43 +161,111 @@ def create_prior():
     ])
     return prior
 
-def run_mcmc(prior, pot, log_prob):
-    with Pool(4) as pool:
+
+def sample_single_galaxy(i, likelihood_estimator, prior, x_o, uncertainty):
+    import warnings
+    warnings.filterwarnings("ignore", message="An x with a batch size of")
+    warnings.filterwarnings("ignore", message="As of sbi v0.19.0")
+    
+    # --- APPLY MONKEYPATCH INSIDE WORKER ---
+    import pocomc.tools
+    import pocomc.geometry
+    pocomc.tools.systematic_resample = patched_systematic_resample
+    pocomc.geometry.systematic_resample = patched_systematic_resample
+    # ---------------------------------------
+    
+    start_time = time.perf_counter()
+    print(f"starting {i}th galaxy")
+    
+    pot = create_potential(likelihood_estimator, generate_prior(realistic_gamma=False), x_o, uncertainty)
+    with Pool(2) as pool:
         sampler = pc.Sampler(
             prior = prior,
             likelihood=log_prob,
             likelihood_args=[pot],
             vectorize=True,
             random_state=13,
+            # n_effective=1000,
             pool=pool)
         sampler.run()
-    return sampler
-
-
-
-def save_samples(sampler, save_path):
     samples, logl, logp = sampler.posterior(resample=True)
-    # save_csv(samples, f"./model_8/mock_noSF/Mock{mock}_samples_poco.csv", override=False)
-    save_csv(samples, save_path, override=False)
+    
+    end_time = time.perf_counter()
+    print(f"Galaxy {i} took {end_time - start_time:.4f} seconds")
+    
+    return samples
+
+
+def run_mcmc(likelihood_estimator, prior, test_x, n_galaxies_at_once, uncertainty=None):
+    
+    final_samples = Parallel(n_jobs=n_galaxies_at_once, verbose=10)(
+                delayed(sample_single_galaxy)(i, likelihood_estimator, prior, x_o, uncertainty[i]) 
+                for i, x_o in enumerate(test_x)
+            )
+    return final_samples    
+    
+
 
 
 
 if __name__ == "__main__":
     
+    # # MCMC on fixed rstar
+    # mock = "B"
+    # dim = 3
+    # prof = "core"
+    # test_x = prep_data(f"./8d_theta/model_8/mock/data/Mock{mock}_refined.csv",
+    #                 train_x= "./8d_theta/model_8/5d/train_x.h5",
+    #                 dim=3,)
+    # uncertainty = torch.log10(load_csv(f"./8d_theta/model_8/mock/data/Mock{mock}_unc.csv", "Tensor"))
+    # likelihood_estimator = load_pickle(f"./8d_theta/model_8/{dim}d/inference.pkl")._neural_net
+    
+    # prior = RStarPrior(0.22924, 0.004695)
+    # samples = run_mcmc(likelihood_estimator, prior, test_x, 1, uncertainty=[uncertaint])
+    
+    # save_samples(samples, f"./8d_theta/model_8/mock/Mock{mock}_samples_fixed_t.csv")
+    
+# ======================================================================================================
+
+    # # MCMC settings - P(v| x, y, sigma, theta)
+                                        
+    # Example code for mass density
+    # prof = "cusp"
     mock = "A"
     dim = 3
-    prof = "core"
-    test_x = prep_data(f"./8d_theta/model_8/mock_noSF/data/Mock{mock}_refined.csv",
-                    train_x= "./8d_theta/model_8/5d/train_x.h5",
-                    dim=3,)
-    uncertainty = torch.log10(load_csv(f"./8d_theta/model_8/mock_noSF/data/Mock{mock}_unc.csv", "Tensor"))
-    likelihood_estimator = load_pickle(f"./8d_theta/model_8/{dim}d/inference.pkl")._neural_net
-    
-    pot = create_potential(likelihood_estimator, generate_prior(realistic_gamma=False), test_x, uncertainty)
+    print(mock)
+    test_x, position = prep_data(f"./8d_theta/model_8/mock/data/Mock{mock}_refined.csv",
+                       train_x= f"./8d_theta/model_8/5d/train_x.h5",
+                       uncertainty=True,
+                       selection=True,
+                       dim=dim)
+
+    uncertainty = load_csv(f"./8d_theta/model_8/mock/data/Mock{mock}_unc.csv", "Tensor")
+
+        
+    likelihood_estimator = load_pickle(f"./8d_theta/model_9/{dim}d/inference.pkl")._neural_net
     
     prior = RStarPrior(0.22924, 0.004695)
-    sampler = run_mcmc(prior, pot, log_prob)
-    
-    save_samples(sampler, f"./8d_theta/model_8/mock_noSF/Mock{mock}_samples_fixed.csv")
+    samples = run_mcmc(likelihood_estimator, prior, test_x, 1, uncertainty=[torch.column_stack((uncertainty, position))])
     
     
+    save_samples(samples,
+                 f"8d_theta/model_9/{dim}d/mock/Mock{mock}_samples.csv")
+    
+# ======================================================================================================
+    # Model evaluation
+    # dim = 3
+    # test_x, uncertainties = prep_data(f"./8d_theta/model_8/{dim}d/test_x.h5",
+    #                                   test_theta=f"./8d_theta/model_8/{dim}d/test_theta.h5",
+    #                                   train_x=f"./8d_theta/model_8/5d/train_x.h5",
+    #                                   dim=dim,
+    #                                   uncertainty=True,
+    #                                   num_entries=1000)
+    # print(test_x[0].shape, uncertainties[0].shape)
+    # print(test_x.__len__(), uncertainties.__len__())
+    
+    # likelihood_estimator = load_pickle(f"./8d_theta/model_8/{dim}d/inference.pkl")._neural_net
+    
+    # samples = run_mcmc(likelihood_estimator, create_prior(), test_x, 32, uncertainty=uncertainties)
+    
+    # save_samples(samples, f"./8d_theta/model_8/{dim}d/samples_poco.pkl")

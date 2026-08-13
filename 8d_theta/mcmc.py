@@ -33,7 +33,7 @@ np.random.seed(13)
 def prep_data(test_x: str,
               test_theta: str|None = None,
               train_x: str|None = None,
-              num_entries:int = 100,
+              num_entries:int = 10000,
               uncertainty:bool = False,
               selection:bool = False,
               dim:int = 5) -> list[torch.Tensor]:
