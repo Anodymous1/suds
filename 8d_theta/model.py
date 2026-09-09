@@ -28,6 +28,14 @@ agama.setRandomSeed(13)
 torch.manual_seed(13)
 np.random.seed(13)
 
+import torch.utils.data
+
+# Monkey-patch SubsetRandomSampler to prevent std::bad_alloc on large datasets
+def patched_subset_random_sampler_iter(self):
+    for i in torch.randperm(len(self.indices), generator=self.generator).tolist():
+        yield self.indices[i]
+
+torch.utils.data.SubsetRandomSampler.__iter__ = patched_subset_random_sampler_iter
 
 def prep_data(train_theta:str,
               train_x:str,
@@ -120,19 +128,19 @@ def train_model(inference:SNLE,
 
 
 if __name__ == "__main__":
-    train_theta, train_x = prep_data("./8d_theta/model_8/5d/train_theta.h5",
-                                     "./8d_theta/model_8/5d/train_x.h5",
+    train_theta, train_x = prep_data("./8d_theta/model_10/5d/train_theta.h5",
+                                     "./8d_theta/model_10/5d/train_x.h5",
                                      uncertainty=True,
-                                     dim=4)
+                                     dim=3)
 
     # ### For P(v| x, y, sigma, theta) ###
     # train_theta = torch.column_stack((train_theta, train_x[:, :2]))
     # train_x = train_x[:, 2:]
 
     likelihood_estimator_settings = {'model': 'maf',
-                                    'hidden_features': 34,
-                                    'num_transforms': 10,
-                                    'num_bins': 4}
+                                    'hidden_features': 71,
+                                    'num_transforms': 8,
+                                    'num_bins': 9}
     
     inference = prep_inference(train_theta,
                                train_x,
@@ -141,7 +149,7 @@ if __name__ == "__main__":
 
     arg = {
             "training_batch_size": 4096,
-            "learning_rate": 0.005857057586417577,
+            "learning_rate": 0.0006921732022808391,
             "validation_fraction": 0.1,
             "stop_after_epochs": 20,
             "max_num_epochs": 100,
@@ -157,5 +165,5 @@ if __name__ == "__main__":
     
     inference = train_model(inference, arg)
     
-    save_pickle(inference, "./8d_theta/model_8/4d/inference.pkl")
+    save_pickle(inference, "./8d_theta/model_10/3d/inference.pkl")
 

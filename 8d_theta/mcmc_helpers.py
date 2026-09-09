@@ -14,6 +14,9 @@ from sbi.utils import mcmc_transform
 from sbi.utils.torchutils import atleast_2d
 from typing import Any, Callable, Optional, Tuple, Union
 
+from scipy.stats import uniform, norm
+import parameter_bounds as p
+
 import torch
 from arviz.data import InferenceData
 from torch import Tensor
@@ -129,6 +132,95 @@ class MCMCPosteriorWithUncertainty(MCMCPosterior):
             
         return super().sample(*args, **kwargs)
     
+class RStarPrior():
+    def __init__(self, r_star, r_star_unc):
+        self.r_star_dist = norm(loc=r_star, scale=r_star_unc) if r_star_unc != 0 else r_star
+
+    def generate_no_r_star_prior(self, log_r_star):
+        # remove r_star from intervals
+        loc = np.asarray(p.mins_without_uncertainty.copy())
+        scale = np.asarray(p.maxs_without_uncertainty.copy()) - loc
+        loc = np.delete(loc, 4)
+        scale = np.delete(scale, 4)
+        
+        size = log_r_star.shape[0]
+        loc = np.tile(loc, (size, 1))
+        scale = np.tile(scale, (size, 1))
+        loc[:, 4] -= log_r_star
+        loc[:, 5] += log_r_star
+        
+        # create uniform distribution
+        no_rstar_dist = uniform(loc=loc, scale=scale)
+        
+        return no_rstar_dist
+        
+    def logpdf(self, x):
+        """
+        Log prob
+        
+        Assumes that r_star is constant
+        """
+        
+        log_r_star = x[:, 4] + x[:, 5]
+        
+        x = np.delete(x, 4, axis=1)
+        x[:,4] -= log_r_star
+        x[:,5] += log_r_star
+        
+        no_rstar_dist = self.generate_no_r_star_prior(log_r_star)
+        
+        if isinstance(self.r_star_dist, float):
+            return np.sum(no_rstar_dist.logpdf(x), axis=1)
+        else: 
+            return np.sum(no_rstar_dist.logpdf(x), axis=1) + self.r_star_dist.logpdf(10 ** log_r_star)
+    
+    def rvs(self, size=1):
+        """
+        Sample
+        
+        params:
+        - size: number of samples, must be scalar
+        """
+        # Sample r_star
+        if isinstance(self.r_star_dist, float):
+            log_r_star = np.log10(np.full(size, self.r_star_dist))
+        else:
+            log_r_star = np.log10(self.r_star_dist.rvs(size=size))
+            
+        
+        # sample
+        no_rstar_dist = self.generate_no_r_star_prior(log_r_star)
+        no_rstar_samples = no_rstar_dist.rvs(size=(size,7))
+        
+        # Re-include r_star
+        samples = np.zeros((size, 8))
+        samples[:, :4] = no_rstar_samples[:, :4]
+        samples[:, 4] = -no_rstar_samples[:, 4]
+        samples[:, 5] = log_r_star + no_rstar_samples[:, 4]
+        samples[:, 6] = no_rstar_samples[:, 5] - log_r_star
+        samples[:, 7] = no_rstar_samples[:, 6]
+        
+        return samples
+    
+    @property
+    def bounds(self):
+        # min = np.asarray(p.mins_without_uncertainty.copy())
+        # max = np.asarray(p.maxs_without_uncertainty.copy())
+        
+        # return np.column_stack((min, max))
+        
+        return np.column_stack((np.full((8, 1), -np.inf), np.full((8, 1), np.inf)))
+    
+    @property
+    def dim(self):
+        return 8
+    
+    def log_prob(self, *args):
+        return self.logpdf(*args)
+    
+    def sample(self, *args):
+        return self.rvs(*args)
+    
 class CombinedLikelihoodEstimator():
     """
     A wrapper that combines the log prob function of two NLE models \
@@ -154,4 +246,3 @@ class CombinedLikelihoodEstimator():
         three_d_theta, five_d_theta = theta[mask], theta[~mask]
         
         return self.net3.log_prob(three_d_x, three_d_theta) + self.net5.log_prob(five_d_x, five_d_theta)
-        

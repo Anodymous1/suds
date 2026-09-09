@@ -24,8 +24,8 @@ from prior_generation import generate_prior
 from mcmc_helpers import likelihood_estimator_based_potential_with_uncertainty, MCMCPosteriorWithUncertainty, CombinedLikelihoodEstimator, LikelihoodBasedPotentialWithUncertainty
 from mcmc import prep_data, save_samples
 import parameter_bounds as p
-from scipy.stats import uniform, norm
-from mcmc_helpers import LikelihoodBasedPotentialWithUncertainty
+from scipy.stats import uniform, norm, rv_discrete
+from mcmc_helpers import LikelihoodBasedPotentialWithUncertainty, RStarPrior
 
 
 # ================================================================================================================
@@ -57,83 +57,6 @@ torch.manual_seed(13)
 np.random.seed(13)
 torch.set_num_threads(1)
 
-
-
-class RStarPrior():
-    def __init__(self, r_star, r_star_unc):
-        self.r_star_dist = norm(loc=r_star, scale=r_star_unc)
-
-    def generate_no_r_star_prior(self, log_r_star):
-        # remove r_star from intervals
-        loc = np.asarray(p.mins_without_uncertainty.copy())
-        scale = np.asarray(p.maxs_without_uncertainty.copy()) - loc
-        loc = np.delete(loc, 4)
-        scale = np.delete(scale, 4)
-        
-        size = log_r_star.shape[0]
-        loc = np.tile(loc, (size, 1))
-        scale = np.tile(scale, (size, 1))
-        loc[:, 4] -= log_r_star
-        loc[:, 5] += log_r_star
-        
-        # create uniform distribution
-        no_rstar_dist = uniform(loc=loc, scale=scale)
-        
-        return no_rstar_dist
-        
-    def logpdf(self, x):
-        """
-        Log prob
-        
-        Assumes that r_star is constant
-        """
-        
-        log_r_star = x[:, 4] + x[:, 5]
-        
-        x = np.delete(x, 4, axis=1)
-        x[:,4] -= log_r_star
-        x[:,5] += log_r_star
-        
-        no_rstar_dist = self.generate_no_r_star_prior(log_r_star)
-        
-        return np.sum(no_rstar_dist.logpdf(x), axis=1) + self.r_star_dist.logpdf(10 ** log_r_star)
-    
-    def rvs(self, size=1):
-        """
-        Sample
-        
-        params:
-        - size: number of samples, must be scalar
-        """
-        # Sample r_star
-        log_r_star = np.log10(self.r_star_dist.rvs(size=size))
-        
-        # sample
-        no_rstar_dist = self.generate_no_r_star_prior(log_r_star)
-        no_rstar_samples = no_rstar_dist.rvs(size=(size,7))
-        
-        # Re-include r_star
-        samples = np.zeros((size, 8))
-        samples[:, :4] = no_rstar_samples[:, :4]
-        samples[:, 4] = -no_rstar_samples[:, 4]
-        samples[:, 5] = log_r_star + no_rstar_samples[:, 4]
-        samples[:, 6] = no_rstar_samples[:, 5] - log_r_star
-        samples[:, 7] = no_rstar_samples[:, 6]
-        
-        return samples
-    
-    @property
-    def bounds(self):
-        # min = np.asarray(p.mins_without_uncertainty.copy())
-        # max = np.asarray(p.maxs_without_uncertainty.copy())
-        
-        # return np.column_stack((min, max))
-        
-        return np.column_stack((np.full((8, 1), -np.inf), np.full((8, 1), np.inf)))
-    
-    @property
-    def dim(self):
-        return 8
         
 
 
@@ -210,7 +133,7 @@ def run_mcmc(likelihood_estimator, prior, test_x, n_galaxies_at_once, uncertaint
 
 if __name__ == "__main__":
     
-    # # MCMC on fixed rstar
+    # # MCMC on fixed rstar (mock)
     # mock = "B"
     # dim = 3
     # prof = "core"
@@ -221,51 +144,69 @@ if __name__ == "__main__":
     # likelihood_estimator = load_pickle(f"./8d_theta/model_8/{dim}d/inference.pkl")._neural_net
     
     # prior = RStarPrior(0.22924, 0.004695)
-    # samples = run_mcmc(likelihood_estimator, prior, test_x, 1, uncertainty=[uncertaint])
+    # samples = run_mcmc(likelihood_estimator, prior, test_x, 1, uncertainty=[uncertainty])
     
     # save_samples(samples, f"./8d_theta/model_8/mock/Mock{mock}_samples_fixed_t.csv")
     
 # ======================================================================================================
 
-    # # MCMC settings - P(v| x, y, sigma, theta)
-                                        
-    # Example code for mass density
-    # prof = "cusp"
-    mock = "A"
+    # # MCMC on fixed rstar
     dim = 3
-    print(mock)
-    test_x, position = prep_data(f"./8d_theta/model_8/mock/data/Mock{mock}_refined.csv",
-                       train_x= f"./8d_theta/model_8/5d/train_x.h5",
-                       uncertainty=True,
-                       selection=True,
-                       dim=dim)
-
-    uncertainty = load_csv(f"./8d_theta/model_8/mock/data/Mock{mock}_unc.csv", "Tensor")
-
-        
-    likelihood_estimator = load_pickle(f"./8d_theta/model_9/{dim}d/inference.pkl")._neural_net
+    prof = "cusp"
+    test_x = prep_data(f"./8d_theta/model_7_1/3d/mass_density_{prof}.csv",
+                    train_x= "./8d_theta/model_8/5d/train_x.h5",
+                    dim=3,)
+    # uncertainty = torch.log10(load_csv(f"./8d_theta/model_8/mock/data/Mock{mock}_unc.csv", "Tensor"))
+    uncertainty = torch.log10(torch.full((100,1), 1))
     
-    prior = RStarPrior(0.22924, 0.004695)
-    samples = run_mcmc(likelihood_estimator, prior, test_x, 1, uncertainty=[torch.column_stack((uncertainty, position))])
+    likelihood_estimator = load_pickle(f"./8d_theta/model_8/{dim}d/inference.pkl")._neural_net
     
+    prior = RStarPrior(0.229, 0)
+    samples = run_mcmc(likelihood_estimator, prior, test_x, 1, uncertainty=[uncertainty])
     
-    save_samples(samples,
-                 f"8d_theta/model_9/{dim}d/mock/Mock{mock}_samples.csv")
+    save_samples(samples, f"./8d_theta/model_8/3d/mass_density_samples_{prof}_fixed.csv")
     
 # ======================================================================================================
-    # Model evaluation
+
+    # # # MCMC settings - P(v| x, y, sigma, theta)
+                                        
+    # # Example code for mass density
+    # # prof = "cusp"
+    # mock = "A"
+    # dim = 3
+    # print(mock)
+    # test_x, position = prep_data(f"./8d_theta/model_8/mock/data/Mock{mock}_refined.csv",
+    #                    train_x= f"./8d_theta/model_8/5d/train_x.h5",
+    #                    uncertainty=True,
+    #                    selection=True,
+    #                    dim=dim)
+
+    # uncertainty = load_csv(f"./8d_theta/model_8/mock/data/Mock{mock}_unc.csv", "Tensor")
+
+        
+    # likelihood_estimator = load_pickle(f"./8d_theta/model_9/{dim}d/inference.pkl")._neural_net
+    
+    # prior = RStarPrior(0.22924, 0.004695)
+    # samples = run_mcmc(likelihood_estimator, prior, test_x, 1, uncertainty=[torch.column_stack((uncertainty, position))])
+    
+    
+    # save_samples(samples,
+    #              f"8d_theta/model_9/{dim}d/mock/Mock{mock}_samples.csv")
+    
+# ======================================================================================================
+    # # Model evaluation
     # dim = 3
     # test_x, uncertainties = prep_data(f"./8d_theta/model_8/{dim}d/test_x.h5",
     #                                   test_theta=f"./8d_theta/model_8/{dim}d/test_theta.h5",
-    #                                   train_x=f"./8d_theta/model_8/5d/train_x.h5",
+    #                                   train_x=f"./8d_theta/model_10/5d/train_x.h5",
     #                                   dim=dim,
     #                                   uncertainty=True,
-    #                                   num_entries=1000)
+    #                                   num_entries=2000)
     # print(test_x[0].shape, uncertainties[0].shape)
     # print(test_x.__len__(), uncertainties.__len__())
     
-    # likelihood_estimator = load_pickle(f"./8d_theta/model_8/{dim}d/inference.pkl")._neural_net
+    # likelihood_estimator = load_pickle(f"./8d_theta/model_10/{dim}d/inference.pkl")._neural_net
     
     # samples = run_mcmc(likelihood_estimator, create_prior(), test_x, 32, uncertainty=uncertainties)
     
-    # save_samples(samples, f"./8d_theta/model_8/{dim}d/samples_poco.pkl")
+    # save_samples(samples, f"./8d_theta/model_10/{dim}d/samples_poco_2000.pkl")
