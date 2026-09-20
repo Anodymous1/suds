@@ -1,3 +1,4 @@
+from collections.abc import Callable
 import os
 os.environ["OMP_NUM_THREADS"] = "1"     # agama
 os.environ["MKL_NUM_THREADS"] = "1"     # numpy, scipy
@@ -19,7 +20,8 @@ def generate_data(num_galaxies:int,
                   dim:int,
                   uncertainty:bool = False,
                   poisson:bool = True, 
-                  n_jobs:int = 1) -> tuple[torch.Tensor]:
+                  filter:Callable = None,
+                  n_jobs:int = 1,) -> tuple[torch.Tensor]:
     """
     Generate the data in prepartion of saving as a csv file
     
@@ -29,6 +31,7 @@ def generate_data(num_galaxies:int,
     - dim: dimension of x
     - uncertainty: to include uncertainty in the inference or not
     - poisson: use the poisson distribution to determine the number of stars to generate
+    - filter: apply a filter to the prior. None if no filter is needed
     - n_jobs: number of CPU cores used to generate the data
     
     return:
@@ -37,7 +40,16 @@ def generate_data(num_galaxies:int,
     """
     
     prior = generate_prior()
+    
     galaxies = prior.sample((num_galaxies,))
+    
+    if filter is not None:
+        galaxies = filter(galaxies)
+        while galaxies.shape[0] != num_galaxies:
+            n = num_galaxies - galaxies.shape[0]
+            new_galaxies = prior.sample((n,))
+            galaxies = torch.vstack((galaxies, new_galaxies))
+
     
     if poisson:
         rates = torch.full((num_galaxies,), num_stars, dtype=torch.float32)
@@ -91,7 +103,7 @@ def compress(file:str, save_path:str):
     # save
     save_csv(a, save_path)
 
-def dimension_reduction(df: np.ndarray, type:str):
+def dimension_reduction(df: np.ndarray, type:str, target_dim: int):
     """
     Reduce the dimension of stellar kinematics, from 3 dimensional to 2 dimensional,\
         or from 5 dimensional to 3 dimensional
@@ -99,43 +111,57 @@ def dimension_reduction(df: np.ndarray, type:str):
     
     Params:
     - file: file path to train_theta
-    - save_path: where to save compressed file
     - type: type of file that needs to be compressed, either "x" or "theta" 
+    - target_dim: the resulting dimension of the file
     """
   
     if type == "x":
-        if df.shape[1] == 3:
+        if df.shape[1] == 3 and target_dim == 2: # 3 to 2
             new_array = np.zeros((df.shape[0], 2))
             new_array[:,0] = np.sqrt(df[:,0] ** 2 + df[:, 1] ** 2)
             new_array[:,1] = df[:,2]
-        elif df.shape[1] == 5:
+        elif df.shape[1] == 5 and target_dim == 3: # 5 to 3
             new_array = df[:, (0, 1, 4)]
+        elif df.shape[1] == 5 and target_dim == 4: # 5 to 4
+            new_array = df[:, (0, 1, 2, 3)]
     elif type == "theta":
-        if df.shape[1] == 11:
+        if df.shape[1] == 11 and target_dim == 3: # 5 to 3
             new_array = df[:, (0, 1, 2, 3, 4, 5, 6, 7, 10)]
-            
-
-    return new_array
+        elif df.shape[1] == 11 and target_dim == 4:
+            new_array = df[:, :-1]     
     
+    return new_array
+
+def filter(theta):
+    
+    beta0_mask = theta[:,-1] <= 0
+
+    r_star = theta[:, 5] + theta[:, 4]
+    r_a = theta[:, 6] + r_star
+    r_a_mask = ~(10 ** r_a < (0.5 * 10 ** r_star))
+    mask = torch.logical_and(beta0_mask, r_a_mask)
+    
+    return theta[mask]
 
 if __name__ == "__main__":
     # Generate Dataset
-    theta, x = generate_data(500_000,
+    theta, x = generate_data(1_000_000,
                              100,
-                             3,
-                             uncertainty=True,
+                             5,
+                             uncertainty=False,
+                            #  filter=filter,
                              n_jobs=4)
     # for i in range(4999):
     #     t, x0 = generate_data(100,
     #                          100,
     #                          5,
-    #                          uncertainty=True,
+    #                          uncertainty=False,
     #                          n_jobs=4)
     #     theta = torch.cat((theta, t), dim=0)
     #     x = torch.cat((x, x0), dim=0)
-
-    save_h5(theta, "./8d_theta/model_11/train_theta.h5", "theta", override=False)
-    save_h5(x, "./8d_theta/model_11/train_x.h5", "x", override=False)
+    
+    save_h5(theta, "./8d_theta/model_15/5d/train_theta.h5", "theta", override=False)
+    save_h5(x, "./8d_theta/model_15/5d/train_x.h5", "x", override=False)
     
 # ======================================================================================================
     # Single
@@ -152,10 +178,18 @@ if __name__ == "__main__":
     # dimension_reduction("./8d_theta/model_7_1/5d/train_x.csv", "./8d_theta/model_7_1/3d/train_x.csv", "x")
     # dimension_reduction("./8d_theta/model_7_1/5d/train_theta.csv", "./8d_theta/model_7_1/3d/train_theta.csv", "theta")
     
-    # a = load_h5("./8d_theta/model_10/5d/train_x.h5", "x", "ndarray")
-    # b = dimension_reduction(a, "x")
-    # save_h5(b, "./8d_theta/model_10/3d/train_x.h5", "x")
+    a = load_h5("./8d_theta/model_15/5d/train_x.h5", "x", "ndarray")
+    b = dimension_reduction(a, "x", 4)
+    save_h5(b, "./8d_theta/model_15/4d/train_x.h5", "x", override=False)
     
-    # a = load_h5("./8d_theta/model_10/5d/train_theta.h5", "theta", "ndarray")
-    # b = dimension_reduction(a, "theta")
-    # save_h5(b, "./8d_theta/model_10/3d/train_theta.h5", "theta")
+    # a = load_h5("./8d_theta/model_15/5d/train_theta.h5", "theta", "ndarray")
+    # b = dimension_reduction(a, "theta", 4)
+    # save_h5(b, "./8d_theta/model_15/4d/train_theta.h5", "theta", override=False)
+    
+    a = load_h5("./8d_theta/model_15/5d/train_x.h5", "x", "ndarray")
+    b = dimension_reduction(a, "x", 3)
+    save_h5(b, "./8d_theta/model_15/3d/train_x.h5", "x", override=False)
+    
+    # a = load_h5("./8d_theta/model_15/5d/train_theta.h5", "theta", "ndarray")
+    # b = dimension_reduction(a, "theta", 3)
+    # save_h5(b, "./8d_theta/model_15/3d/train_theta.h5", "theta", override=False)

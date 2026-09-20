@@ -133,8 +133,17 @@ class MCMCPosteriorWithUncertainty(MCMCPosterior):
         return super().sample(*args, **kwargs)
     
 class RStarPrior():
-    def __init__(self, r_star, r_star_unc):
+    def __init__(self, r_star, r_star_unc, negative_beta0=False):
+        self.r_star = r_star
+        self.r_star_unc = r_star_unc
         self.r_star_dist = norm(loc=r_star, scale=r_star_unc) if r_star_unc != 0 else r_star
+        
+        if negative_beta0:
+            p.maxs_without_uncertainty[-1] = 0.0
+        
+        s = self.rvs(100_000)
+        self.mean = torch.as_tensor(s.mean(axis=0), dtype=torch.float32)
+        self.stddev = torch.as_tensor(s.std(axis=0), dtype=torch.float32)
 
     def generate_no_r_star_prior(self, log_r_star):
         # remove r_star from intervals
@@ -211,15 +220,21 @@ class RStarPrior():
         
         return np.column_stack((np.full((8, 1), -np.inf), np.full((8, 1), np.inf)))
     
+    
+    def log_prob(self, theta):
+        x = np.asarray(theta.detach().cpu(), dtype=float)
+        return torch.as_tensor(self.logpdf(x), dtype=torch.float32)
+    
+    def sample(self, sample_shape=torch.Size()):
+        shape = tuple(sample_shape)
+        n = int(np.prod(shape)) if shape else 1
+        out = torch.as_tensor(self.rvs(n), dtype=torch.float32)
+        return out.reshape(*shape, 8)
+    
     @property
     def dim(self):
         return 8
     
-    def log_prob(self, *args):
-        return self.logpdf(*args)
-    
-    def sample(self, *args):
-        return self.rvs(*args)
     
 class CombinedLikelihoodEstimator():
     """

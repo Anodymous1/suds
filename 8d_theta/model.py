@@ -11,6 +11,7 @@ import torch
 import numpy as np
 from astropy import units as u
 
+from torch.optim.lr_scheduler import CosineAnnealingLR
 from sbi.inference import SNLE
 from sbi.utils import likelihood_nn
 import pandas as pd
@@ -20,6 +21,7 @@ from prior_generation import generate_prior
 from object_handler import save_pickle, load_csv, load_galaxies, load_h5
 import time
 from datetime import datetime
+from copy import deepcopy
 torch.set_num_threads(4)
 
 # set agama unit to be in Msun, kpc, km/s
@@ -66,12 +68,13 @@ def prep_data(train_theta:str,
     train_x_raw = load_h5(train_x, "x", "Tensor") if ".h5" in train_x else load_csv(train_x, "Tensor")
 
     # Reduce to the desired dimension
-    if dim == 4:
-        train_x_raw = train_x_raw[:, :4]
-        prepped_theta = prepped_theta[:, :10] if uncertainty else prepped_theta
-    elif dim == 3:
-        train_x_raw = train_x_raw[:, (0, 1, 4)]
-        prepped_theta = prepped_theta[:, (0, 1, 2, 3, 4, 5, 6, 7, 10)] if uncertainty else prepped_theta
+    if dim != train_x_raw.shape[1]:
+        if dim == 4:
+            train_x_raw = train_x_raw[:, :4]
+            prepped_theta = prepped_theta[:, :10] if uncertainty else prepped_theta
+        elif dim == 3:
+            train_x_raw = train_x_raw[:, (0, 1, 4)]
+            prepped_theta = prepped_theta[:, (0, 1, 2, 3, 4, 5, 6, 7, 10)] if uncertainty else prepped_theta
 
     # Standardize the x
     prepped_x = standardize(train_x_raw)[0] if standardization else train_x_raw    
@@ -81,7 +84,7 @@ def prep_data(train_theta:str,
 def prep_inference(train_theta: torch.Tensor,
                    train_x: torch.Tensor,
                    likelihood_estimator_settings: dict[str, str | int] | None = None, 
-                   uncertainty:bool = False
+                #    uncertainty:bool = False
                    ) -> SNLE:
     """
     Prepare the inference for training
@@ -93,33 +96,69 @@ def prep_inference(train_theta: torch.Tensor,
     - uncertainty: to include uncertainty in the inference or not; used for generating the prior
     """
 
-    prior_sbi = generate_prior(uncertainty=uncertainty)
+    # prior_sbi = generate_prior(uncertainty=uncertainty)
 
     if likelihood_estimator_settings is not None:
         density_estimator =likelihood_nn(**likelihood_estimator_settings)
-        inference = SNLE(prior=prior_sbi, density_estimator=density_estimator)
+        # inference = SNLE(prior=prior_sbi, density_estimator=density_estimator)
+        inference = SNLE(density_estimator=density_estimator)
     else:
-        inference = SNLE(prior=prior_sbi)
+        # inference = SNLE(prior=prior_sbi)
+        inference = SNLE()
+    
     
     inference.append_simulations(train_theta, train_x)
     
     return inference
 
 def train_model(inference:SNLE,
-                training_settings: dict[str, int | bool]) -> SNLE:
+                training_settings: dict[str, int | bool],
+                scheduler: bool = False) -> SNLE:
     
     """
     Trains the model
     
     params:
     - inference: the model
+    - scheduler: apply scheduler to the learning rate
     - training_settings: training settings
     """
     start_time = time.perf_counter()
     
     print(f"{datetime.now()}: Beginning model training")
     
-    inference.train(**training_settings)
+    if not scheduler:
+        inference.train(**training_settings)
+    else:
+        epochs = training_settings["max_num_epochs"]
+        patience = training_settings["stop_after_epochs"]
+        
+        training_settings["max_num_epochs"] = 1
+        # first epoch
+        inference.train(**training_settings)
+        
+        training_settings["resume_training"] = True
+        sched = CosineAnnealingLR(inference.optimizer, T_max=epochs)
+        best_val = -float("inf")
+        best_net = deepcopy(inference._neural_net)
+        best_epoch = 0
+
+        for i in range(1, epochs):
+
+            inference.train(**training_settings)
+            sched.step()
+
+            val = inference._summary["validation_log_probs"][-1]
+            if val > best_val + 0.01:
+                best_val, best_epoch = val, i
+                best_net = deepcopy(inference._neural_net)
+            elif i - best_epoch >= patience:
+                print(f"stopping at epoch {i}; best {best_val:.4f} at epoch {best_epoch}")
+                break
+
+        inference._neural_net = best_net
+        inference._best_val_log_prob = best_val
+        print(f"best validation log-prob {best_val:.4f} at epoch {best_epoch}/{i}")
     
     end_time = time.perf_counter()
     print(f"Training took {end_time - start_time}")
@@ -128,32 +167,34 @@ def train_model(inference:SNLE,
 
 
 if __name__ == "__main__":
-    train_theta, train_x = prep_data("./8d_theta/model_10/5d/train_theta.h5",
-                                     "./8d_theta/model_10/5d/train_x.h5",
-                                     uncertainty=True,
+    train_theta, train_x = prep_data("./8d_theta/model_13/train_theta.h5",
+                                     "./8d_theta/model_13/train_x.h5",
+                                     uncertainty=False,
                                      dim=3)
+
 
     # ### For P(v| x, y, sigma, theta) ###
     # train_theta = torch.column_stack((train_theta, train_x[:, :2]))
     # train_x = train_x[:, 2:]
 
+
     likelihood_estimator_settings = {'model': 'maf',
-                                    'hidden_features': 71,
-                                    'num_transforms': 8,
-                                    'num_bins': 9}
+                                    'hidden_features': 119,
+                                    'num_transforms': 9,
+                                    'num_bins': 11}
     
     inference = prep_inference(train_theta,
                                train_x,
-                               likelihood_estimator_settings=likelihood_estimator_settings,
-                               uncertainty=True)
+                               likelihood_estimator_settings=likelihood_estimator_settings,)
+                            #    uncertainty=True)
 
     arg = {
             "training_batch_size": 4096,
-            "learning_rate": 0.0006921732022808391,
+            "learning_rate": 0.0010091330338091549,
             "validation_fraction": 0.1,
             "stop_after_epochs": 20,
-            "max_num_epochs": 100,
-            "clip_max_norm": 5.0,
+            "max_num_epochs": 300,
+            "clip_max_norm": 3.0,
             "resume_training": False,
             "discard_prior_samples": False,
             "retrain_from_scratch": False,
@@ -163,7 +204,7 @@ if __name__ == "__main__":
     }
     
     
-    inference = train_model(inference, arg)
+    inference = train_model(inference, arg, scheduler=True)
     
-    save_pickle(inference, "./8d_theta/model_10/3d/inference.pkl")
+    save_pickle(inference, "./8d_theta/model_11/inference.pkl")
 

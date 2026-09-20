@@ -60,10 +60,11 @@ def prep_data(test_x: str,
     # standardization
     if train_x is not None:
         train_x = load_h5(train_x, "x", "Tensor") if ".h5" in train_x else load_csv(train_x, "Tensor")
-        if dim == 4:
-            train_x = train_x[:, :4]
-        elif dim == 3:
-            train_x = train_x[:, (0, 1, 4)]
+        if train_x.shape[1] != dim:
+            if dim == 4:
+                train_x = train_x[:, :4]
+            elif dim == 3:
+                train_x = train_x[:, (0, 1, 4)]
         
         x = standardize(train_x)
         test_x_raw = (test_x_raw - x[1])/ x[2]
@@ -129,7 +130,9 @@ def prep_posterior(model:str|list[str],
     
     # inference._neural_net.to("cpu")
     if not uncertainty:    
-        posterior = inference.build_posterior(**mcmc_settings)
+        prior = generate_prior(uncertainty= False, realistic_gamma=False)
+        
+        posterior = inference.build_posterior(**mcmc_settings, prior=prior)
     
     elif uncertainty:
         if isinstance(model, str):
@@ -249,12 +252,12 @@ def save_samples(samples:list[np.ndarray],
 
 if __name__ == "__main__":
     
-    torch.set_num_threads(4)
+    torch.set_num_threads(1)
     
     # # MCMC settings - With Uncertainties
     # mcmc_settings = {"mcmc_method":"slice_np_vectorized", 
     #                  "mcmc_parameters":{"warmup_steps":500,
-    #                                 "num_chains": 32,
+    #                                 "num_chains": 16,
     #                                 "num_workers": 1,
     #                                 "init_strategy": "sir",
     #                                 "thin": 1}}
@@ -262,16 +265,17 @@ if __name__ == "__main__":
                                         
     # # Example code for mass density
     # # prof = "cusp"
-    # mock = "B"
+    # mock = "A"
     
     # # print(mock)
     # test_x = prep_data(f"./8d_theta/model_8/mock/data/Mock{mock}_refined.csv",
-    #                    train_x= "./8d_theta/model_8/5d/train_x.h5",
-    #                    dim=3,)
+    #                    train_x= "./8d_theta/model_12/train_x.h5",
+    #                    dim=3,)[:200]
     
-    # posterior = prep_posterior(f"./8d_theta/model_8/3d/inference.pkl",
+    # posterior = prep_posterior(f"./8d_theta/model_12/inference.pkl",
     #                            mcmc_settings,
-    #                            uncertainty=True)
+    #                            uncertainty=True,
+    #                            fixed_r_star=(0.22924, 0.004695))
     
     # uncertainty = load_csv(f"./8d_theta/model_8/mock/data/Mock{mock}_unc.csv", "Tensor")
     # # uncertainty = torch.full((100,1), 1)
@@ -279,7 +283,7 @@ if __name__ == "__main__":
     #                          uncertainties=[torch.log10(uncertainty)])
     
     # save_samples(final_samples,
-    #              f"8d_theta/model_8/mock/Mock{mock}_samples_fixed_SBI.csv")
+    #              f"8d_theta/model_12/Mock{mock}_samples_fixed_SBI.csv")
     
 # ======================================================================================================
     # # # MCMC settings - P(v| x, y, sigma, theta)
@@ -315,31 +319,32 @@ if __name__ == "__main__":
     #              f"8d_theta/model_9/{dim}d/mock/Mock{mock}_samples.csv")
     
 # ======================================================================================================
-    # # MCMC settings - No Uncertainties
-    # mcmc_settings = {"mcmc_method":"slice_np_vectorized", 
-    #                  "mcmc_parameters":{"warmup_steps":500,
-    #                                 "num_chains":16,
-    #                                 "num_workers": 1,
-    #                                 "init_strategy": "sir",
-    #                                 "thin": 1}}
+    # MCMC settings - No Uncertainties
+    mcmc_settings = {"mcmc_method":"slice_np_vectorized", 
+                     "mcmc_parameters":{"warmup_steps":500,
+                                    "num_chains":16,
+                                    "num_workers": 1,
+                                    "init_strategy": "sir",
+                                    "thin": 1}}
                                         
                                         
-    # # Example code for mass density
+    # Example code for mass density
     # prof = "core"
+    mock = "A"
     
-    # print(prof)
-    # test_x = prep_data(f"./8d_theta/model_5_2/5d/mass_density_{prof}.csv",
-    #                    train_x= "./8d_theta/model_5_2/5d/train_x.csv",)
+    print(mock)
+    test_x = prep_data(f"./8d_theta/model_11/mock/data/Mock{mock}.csv",
+                       train_x= "./8d_theta/model_11/train_x.h5",)
     
-    # posterior = prep_posterior(f"./8d_theta/model_5_2/5d/inference.pkl",
-    #                            mcmc_settings,
-    #                            uncertainty=False)
+    posterior = prep_posterior(f"./8d_theta/model_11/inference.pkl",
+                               mcmc_settings,
+                               uncertainty=False)
         
-    # final_samples = run_mcmc(test_x, posterior, 1, 
-    #                          uncertainties=None)
+    final_samples = run_mcmc(test_x, posterior, 1, 
+                             uncertainties=None)
     
-    # save_samples(final_samples,
-    #              f"8d_theta/model_5_2/5d/mass_density_samples_{prof}.csv")
+    save_samples(final_samples,
+                 f"8d_theta/model_11/Mock{mock}_samples_SBI.csv")
     
 # ======================================================================================================
     # # Example code for mass density (SNLE)
@@ -367,25 +372,25 @@ if __name__ == "__main__":
         
 # ======================================================================================================
 
-    # Example code for normal evaluation
-    mcmc_settings = {"mcmc_method":"slice_np_vectorized", 
-                    "mcmc_parameters":{"warmup_steps":500,
-                                "num_chains":16,
-                                "num_workers": 1,
-                                "init_strategy": "sir",
-                                "thin": 1}}
+    # # Example code for normal evaluation
+    # mcmc_settings = {"mcmc_method":"slice_np_vectorized", 
+    #                 "mcmc_parameters":{"warmup_steps":500,
+    #                             "num_chains":16,
+    #                             "num_workers": 1,
+    #                             "init_strategy": "sir",
+    #                             "thin": 1}}
     
-    test_x, uncertainties = prep_data("./8d_theta/model_8/3d/test_x.h5",
-                       test_theta="./8d_theta/model_8/3d/test_theta.h5",
-                       train_x= "./8d_theta/model_10/3d/train_x.h5",
-                       num_entries=1000,
-                       uncertainty=True)
+    # test_x, uncertainties = prep_data("./8d_theta/model_8/3d/test_x.h5",
+    #                    test_theta="./8d_theta/model_8/3d/test_theta.h5",
+    #                    train_x= "./8d_theta/model_10/3d/train_x.h5",
+    #                    num_entries=1000,
+    #                    uncertainty=True)
 
-    posterior = prep_posterior("./8d_theta/model_10/3d/inference.pkl",
-                               mcmc_settings,
-                               uncertainty=True)
+    # posterior = prep_posterior("./8d_theta/model_10/3d/inference.pkl",
+    #                            mcmc_settings,
+    #                            uncertainty=True)
     
-    final_samples = run_mcmc(test_x, posterior, 8, uncertainties=uncertainties)
+    # final_samples = run_mcmc(test_x, posterior, 8, uncertainties=uncertainties)
     
-    save_samples(final_samples,
-                 "8d_theta/model_10/3d/samples.pkl")
+    # save_samples(final_samples,
+    #              "8d_theta/model_10/3d/samples.pkl")
