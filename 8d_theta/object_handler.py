@@ -133,7 +133,6 @@ def load_galaxies(file_path:str, type:str) -> ndarray|Tensor:
     """
     df = load_csv(file_path, "Tensor") if ".csv" in file_path else load_h5(file_path, "theta", "Tensor")
     theta, k = df[:,:-1], df[:,-1].long()
-    k = k.cumsum(dim=0)[:-1]
     
     if type == "ndarray":
         theta = array(theta)

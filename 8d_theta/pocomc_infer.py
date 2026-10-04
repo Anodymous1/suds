@@ -26,8 +26,7 @@ from mcmc import prep_data, save_samples
 import parameter_bounds as p
 from scipy.stats import uniform, norm, rv_discrete
 from mcmc_helpers import LikelihoodBasedPotentialWithUncertainty, RStarPrior
-
-
+from memory_watchdog import start_memory_watchdog
 # ================================================================================================================
 import pocomc.tools
 import pocomc.geometry
@@ -162,19 +161,62 @@ def run_mcmc(likelihood_estimator, prior, test_x, n_galaxies_at_once, uncertaint
 if __name__ == "__main__":
     
     # MCMC on fixed rstar (mock)
-    mock = "D"
-    dim = 3
-    # prof = "core"
-    test_x = prep_data(f"./8d_theta/model_8/mock/data/Mock{mock}_refined.csv",
-                    train_x= "./8d_theta/model_8/5d/train_x.h5",
-                    dim=3,)
-    uncertainty = torch.log10(load_csv(f"./8d_theta/model_8/mock/data/Mock{mock}_unc.csv", "Tensor"))
-    likelihood_estimator = load_pickle(f"./8d_theta/model_8/3d/inference.pkl")._neural_net
+    # start_memory_watchdog(limit_gb=40, min_available_gb=4, interval=1.0, log_every=5)
     
-    prior = RStarPrior(0.22924, 0.004695, negative_beta0=True)
-    samples = run_mcmc(likelihood_estimator, prior, test_x, 1, uncertainty=[uncertainty])
+    # # mock = "D"
+    # def infer(mock):
+    #     # prof = "core"
+    #     test_x = prep_data(f"./8d_theta/model_8/mock/data/Mock{mock}_refined.csv",
+    #                     train_x= "./8d_theta/model_14/3d/train_x.h5",
+    #                     dim=3,)
+    #     uncertainty = torch.log10(load_csv(f"./8d_theta/model_8/mock/data/Mock{mock}_unc.csv", "Tensor"))
+    #     likelihood_estimator = load_pickle(f"./8d_theta/model_14/3d/inference.pkl")._neural_net
+        
+    #     prior = RStarPrior(0.22924, 0.004695, negative_beta0=True)
+    #     # prior = create_prior(negative_beta0=True)
+    #     samples = run_mcmc(likelihood_estimator, prior, test_x, 1, uncertainty=[uncertainty])
+        
+    #     save_samples(samples, f"./8d_theta/model_14/3d/Mock{mock}_samples_beta0_p.csv")
     
-    save_samples(samples, f"./8d_theta/model_8/mock/Mock{mock}_samples_fixed_beta0_p.csv")
+    # Parallel(n_jobs=2, verbose=10)(
+    #                 delayed(infer)(mock) 
+    #                 for mock in "ABCD"
+    #             )
+    
+# ======================================================================================================
+    # MCMC on Real Data
+    start_memory_watchdog(limit_gb=50, min_available_gb=4, interval=1.0, log_every=5)
+    
+    # R star
+    galaxies = {
+            # 'draco_1': (0.22924, 0.004695),
+            'sculptor_1': (0.27268, 0.00513),
+            'carina_1': (0.31003, 0.016035),
+            'fornax_1': (0.82516, 0.01828),
+            'sextans_1': (0.56865, 0.03137),
+            # 'umi_1'
+            }
+    
+    
+    def infer(data, rstar):
+        test_x = prep_data(f"./8d_theta/model_12/pace/ref_data/{data}.csv",
+                        train_x= "./8d_theta/model_12/train_x.h5",
+                        dim=3,)
+        uncertainty = torch.log10(load_csv(f"./8d_theta/model_12/pace/ref_data/{data}_unc.csv", "Tensor"))
+        likelihood_estimator = load_pickle(f"./8d_theta/model_12/inference.pkl")._neural_net
+        
+        prior = RStarPrior(*rstar, negative_beta0=True)
+        samples = run_mcmc(likelihood_estimator, prior, test_x, 1, uncertainty=[uncertainty])
+        
+        save_samples(samples, f"./8d_theta/model_12/pace/{data}_samples.csv")
+        
+        
+    # Parallel(n_jobs=1, verbose=10)(
+    #                 delayed(infer)(data, r_star) 
+    #                 for data, r_star in galaxies.items()
+    #             )
+    for data, r_star in galaxies.items():
+        infer(data, r_star) 
     
 # ======================================================================================================
     # # # MCMC on fixed rstar (mock) - No Uncertainty

@@ -75,6 +75,7 @@ def prep_data(test_x: str,
         if not uncertainty:
             # testing dataset
             _, k = load_galaxies(test_theta, "ndarray")
+            k = k.cumsum(axis=0)[:-1]
             x = np.split(test_x_raw, k, axis=0)
 
             return x[:num_entries]

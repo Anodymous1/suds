@@ -221,22 +221,8 @@ def generate_galaxy_multiple(theta: torch.Tensor,
     
     
     if uncertainty:
-        # if uncertainty is given
-        if theta.shape[1] > 8:
-
-            log_uncertainties = theta[:,8:].repeat(lengths, 1)
-        else:
-            # Generate uncertianty
-            dist = torch.distributions.Uniform(log_uncertainty_min, log_uncertainty_max) # Log uniform as jeffrey's prior works out to this
-            log_uncertainties = dist.sample(x[:, 2:].shape) # [:, 2:] because only columns starting from the third one is velocity
-        
-        x[:, 2:] = torch.normal(x[:, 2:], 10 ** log_uncertainties) # Sample from Gaussian
-        
-        # format theta
-        new_theta = torch.repeat_interleave(theta, lengths, dim=0)
-        new_theta_with_unc = torch.column_stack((new_theta, log_uncertainties))
                 
-        return new_theta_with_unc, x
+        return apply_uncertainty(theta, lengths, x, log_uncertainty_min, log_uncertainty_max)
     
     else:
         # Add lengths to theta (compressing)
@@ -246,3 +232,39 @@ def generate_galaxy_multiple(theta: torch.Tensor,
         mask = new_theta[:, -1] > 0.0
         
         return new_theta[mask], x
+    
+def apply_uncertainty(theta: torch.Tensor, 
+                      lengths: torch.Tensor, 
+                      x: torch.Tensor,
+                      log_uncertainty_min: float,
+                      log_uncertainty_max: float):
+    """
+    Apply uncertainty to data
+    
+    params:
+        - theta: List of galaxy parameters
+        - lengths: number of stars generated with this theta
+        - x: generated stars
+        - log_uncertainty_min: minimum uncertainty (in km/s) in log
+        - log_uncertainty_max: maximum uncertainty (in km/s) in log
+        
+    returns theta and x applied with uncertainty
+    
+    """
+    
+        # if uncertainty is given
+    if theta.shape[1] > 8:
+
+        log_uncertainties = theta[:,8:].repeat(lengths, 1)
+    else:
+        # Generate uncertianty
+        dist = torch.distributions.Uniform(log_uncertainty_min, log_uncertainty_max) # Log uniform as jeffrey's prior works out to this
+        log_uncertainties = dist.sample(x[:, 2:].shape) # [:, 2:] because only columns starting from the third one is velocity
+    
+    x[:, 2:] = torch.normal(x[:, 2:], 10 ** log_uncertainties) # Sample from Gaussian
+    
+    # format theta
+    new_theta = torch.repeat_interleave(theta, lengths, dim=0)
+    new_theta_with_unc = torch.column_stack((new_theta, log_uncertainties))
+            
+    return new_theta_with_unc, x
